@@ -1,0 +1,20 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: log-forwarder-atc-db
+    environment:
+      POSTGRES_DB: log_forwarder_atc
+      POSTGRES_USER: atc
+      POSTGRES_PASSWORD: atc
+    ports:
+      - "5432:5432"
+    volumes:
+      - atc-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atc -d log_forwarder_atc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  atc-db-data:
