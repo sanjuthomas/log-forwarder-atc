@@ -42,9 +42,7 @@ class InstanceRegistrationControllerTest {
                         "host-1",
                         999,
                         Instant.parse("2026-06-11T16:00:00Z"),
-                        8081,
-                        8082,
-                        8083,
+                        8080,
                         Instant.parse("2026-06-11T16:01:00Z"),
                         com.logforwarder.atc.domain.Reachability.UNKNOWN,
                         true
@@ -55,16 +53,16 @@ class InstanceRegistrationControllerTest {
                         .content("""
                                 {
                                   "hostname": "host-1",
-                                  "startTime": "2026-06-11T16:00:00Z",
-                                  "healthPort": 8081,
-                                  "readyPort": 8082,
-                                  "metricsPort": 8083,
-                                  "pid": 999
+                                  "port": 8080,
+                                  "process_id": 999,
+                                  "timestamp": "2026-06-11T16:00:00Z"
                                 }
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.hostname").value("host-1"))
+                .andExpect(jsonPath("$.process_id").value(999))
+                .andExpect(jsonPath("$.port").value(8080))
                 .andExpect(jsonPath("$.created").value(true));
     }
 
@@ -75,7 +73,7 @@ class InstanceRegistrationControllerTest {
                         .content("""
                                 {
                                   "hostname": "host-1",
-                                  "pid": 999
+                                  "process_id": 999
                                 }
                                 """))
                 .andExpect(status().isNoContent());
@@ -92,7 +90,7 @@ class InstanceRegistrationControllerTest {
                         .content("""
                                 {
                                   "hostname": "missing-host",
-                                  "pid": 1
+                                  "process_id": 1
                                 }
                                 """))
                 .andExpect(status().isNotFound());

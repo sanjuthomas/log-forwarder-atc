@@ -17,7 +17,10 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "log_forwarder_instance",
-        uniqueConstraints = @UniqueConstraint(name = "uq_instance_hostname_pid", columnNames = {"hostname", "pid"})
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_instance_hostname_process_id",
+                columnNames = {"hostname", "process_id"}
+        )
 )
 public class LogForwarderInstance {
 
@@ -28,20 +31,14 @@ public class LogForwarderInstance {
     @Column(nullable = false)
     private String hostname;
 
+    @Column(name = "process_id", nullable = false)
+    private long processId;
+
+    @Column(name = "timestamp", nullable = false)
+    private Instant timestamp;
+
     @Column(nullable = false)
-    private long pid;
-
-    @Column(name = "start_time", nullable = false)
-    private Instant startTime;
-
-    @Column(name = "health_port", nullable = false)
-    private int healthPort;
-
-    @Column(name = "ready_port", nullable = false)
-    private int readyPort;
-
-    @Column(name = "metrics_port", nullable = false)
-    private int metricsPort;
+    private int port;
 
     @Column(name = "registered_at", nullable = false)
     private Instant registeredAt;
@@ -58,20 +55,16 @@ public class LogForwarderInstance {
 
     public static LogForwarderInstance create(
             String hostname,
-            long pid,
-            Instant startTime,
-            int healthPort,
-            int readyPort,
-            int metricsPort,
+            long processId,
+            Instant timestamp,
+            int port,
             Instant registeredAt
     ) {
         LogForwarderInstance instance = new LogForwarderInstance();
         instance.hostname = hostname;
-        instance.pid = pid;
-        instance.startTime = startTime;
-        instance.healthPort = healthPort;
-        instance.readyPort = readyPort;
-        instance.metricsPort = metricsPort;
+        instance.processId = processId;
+        instance.timestamp = timestamp;
+        instance.port = port;
         instance.registeredAt = registeredAt;
         instance.reachability = Reachability.UNKNOWN;
         return instance;
@@ -89,44 +82,28 @@ public class LogForwarderInstance {
         this.hostname = hostname;
     }
 
-    public long getPid() {
-        return pid;
+    public long getProcessId() {
+        return processId;
     }
 
-    public void setPid(long pid) {
-        this.pid = pid;
+    public void setProcessId(long processId) {
+        this.processId = processId;
     }
 
-    public Instant getStartTime() {
-        return startTime;
+    public Instant getTimestamp() {
+        return timestamp;
     }
 
-    public void setStartTime(Instant startTime) {
-        this.startTime = startTime;
+    public void setTimestamp(Instant timestamp) {
+        this.timestamp = timestamp;
     }
 
-    public int getHealthPort() {
-        return healthPort;
+    public int getPort() {
+        return port;
     }
 
-    public void setHealthPort(int healthPort) {
-        this.healthPort = healthPort;
-    }
-
-    public int getReadyPort() {
-        return readyPort;
-    }
-
-    public void setReadyPort(int readyPort) {
-        this.readyPort = readyPort;
-    }
-
-    public int getMetricsPort() {
-        return metricsPort;
-    }
-
-    public void setMetricsPort(int metricsPort) {
-        this.metricsPort = metricsPort;
+    public void setPort(int port) {
+        this.port = port;
     }
 
     public Instant getRegisteredAt() {

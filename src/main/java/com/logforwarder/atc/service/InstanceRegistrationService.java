@@ -25,14 +25,12 @@ public class InstanceRegistrationService {
     @Transactional
     public RegistrationResponse register(RegistrationRequest request) {
         Instant now = Instant.now();
-        var existing = instanceRepository.findByHostnameAndPid(request.hostname(), request.pid());
+        var existing = instanceRepository.findByHostnameAndProcessId(request.hostname(), request.processId());
 
         if (existing.isPresent()) {
             LogForwarderInstance instance = existing.get();
-            instance.setStartTime(request.startTime());
-            instance.setHealthPort(request.healthPort());
-            instance.setReadyPort(request.readyPort());
-            instance.setMetricsPort(request.metricsPort());
+            instance.setTimestamp(request.timestamp());
+            instance.setPort(request.port());
             instance.setRegisteredAt(now);
             instance.setReachability(Reachability.UNKNOWN);
             instanceRepository.save(instance);
@@ -41,11 +39,9 @@ public class InstanceRegistrationService {
 
         LogForwarderInstance instance = LogForwarderInstance.create(
                 request.hostname(),
-                request.pid(),
-                request.startTime(),
-                request.healthPort(),
-                request.readyPort(),
-                request.metricsPort(),
+                request.processId(),
+                request.timestamp(),
+                request.port(),
                 now
         );
         instanceRepository.save(instance);
@@ -54,11 +50,14 @@ public class InstanceRegistrationService {
 
     @Transactional
     public void deregister(DeregistrationRequest request) {
-        LogForwarderInstance instance = instanceRepository.findByHostnameAndPid(request.hostname(), request.pid())
+        LogForwarderInstance instance = instanceRepository.findByHostnameAndProcessId(
+                        request.hostname(),
+                        request.processId()
+                )
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "No log-forwarder instance registered for hostname=%s pid=%d"
-                                .formatted(request.hostname(), request.pid())
+                        "No log-forwarder instance registered for hostname=%s process_id=%d"
+                                .formatted(request.hostname(), request.processId())
                 ));
         instanceRepository.delete(instance);
     }
@@ -67,11 +66,9 @@ public class InstanceRegistrationService {
         return new RegistrationResponse(
                 instance.getId(),
                 instance.getHostname(),
-                instance.getPid(),
-                instance.getStartTime(),
-                instance.getHealthPort(),
-                instance.getReadyPort(),
-                instance.getMetricsPort(),
+                instance.getProcessId(),
+                instance.getTimestamp(),
+                instance.getPort(),
                 instance.getRegisteredAt(),
                 instance.getReachability(),
                 created

@@ -28,9 +28,10 @@ public class LogForwarderAgentClient {
 
     public AgentPollResult poll(LogForwarderInstance instance) {
         String baseHost = instance.getHostname();
-        boolean healthUp = probeEndpoint(baseHost, instance.getHealthPort(), properties.agent().healthPath());
-        boolean readyUp = probeEndpoint(baseHost, instance.getReadyPort(), properties.agent().readyPath());
-        AgentMetricsResponse metrics = fetchMetrics(baseHost, instance.getMetricsPort());
+        int port = instance.getPort();
+        boolean healthUp = probeEndpoint(baseHost, port, properties.agent().healthPath());
+        boolean readyUp = probeEndpoint(baseHost, port, properties.agent().readyPath());
+        AgentMetricsResponse metrics = fetchMetrics(baseHost, port);
 
         String error = null;
         if (!healthUp && !readyUp && metrics == null) {

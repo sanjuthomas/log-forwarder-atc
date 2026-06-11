@@ -70,10 +70,10 @@ public class InstancePollingService {
         metricsRepository.save(snapshot);
 
         log.info(
-                "Polled {}:{} pid={} health={} ready={} reachability={}",
+                "Polled {}:{} process_id={} health={} ready={} reachability={}",
                 instance.getHostname(),
-                instance.getMetricsPort(),
-                instance.getPid(),
+                instance.getPort(),
+                instance.getProcessId(),
                 result.healthUp(),
                 result.readyUp(),
                 instance.getReachability()

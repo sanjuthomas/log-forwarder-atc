@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface LogForwarderInstanceRepository extends JpaRepository<LogForwarderInstance, UUID> {
 
-    Optional<LogForwarderInstance> findByHostnameAndPid(String hostname, long pid);
+    Optional<LogForwarderInstance> findByHostnameAndProcessId(String hostname, long processId);
 }

@@ -21,7 +21,7 @@ flowchart LR
     ATC --> DB
 ```
 
-Each agent is uniquely identified by **`hostname` + `pid`**, so multiple forwarders on the same host are supported.
+Each agent is uniquely identified by **`hostname` + `process_id`**, so multiple forwarders on the same host are supported. Health, readiness, and metrics are exposed on a **single port**.
 
 ## Timeseries storage
 
@@ -69,11 +69,11 @@ The dashboard is a static page served from `src/main/resources/static/index.html
 | Column | Description |
 |--------|-------------|
 | Host | Hostname and instance UUID |
-| PID | Process ID (unique per host) |
+| Process ID | Process ID (unique per host) |
 | Reachability | `REACHABLE`, `UNREACHABLE`, or `UNKNOWN` |
 | Health / Ready | Result of the latest `/health` and `/ready` probes |
 | Metrics | Files monitored, events processed, and bytes read |
-| Ports | Health, ready, and metrics ports |
+| Port | Agent HTTP port (health, ready, and metrics) |
 | Last poll | Timestamp of the latest metrics snapshot |
 | Registered | Registration time and agent start time |
 
@@ -87,16 +87,14 @@ Poll data appears after ATC’s first scheduled poll (default **every 60 seconds
 curl -X PUT http://localhost:8090/api/instances \
   -H 'Content-Type: application/json' \
   -d '{
-    "hostname": "my-host",
-    "startTime": "2026-06-11T16:00:00Z",
-    "healthPort": 8081,
-    "readyPort": 8082,
-    "metricsPort": 8083,
-    "pid": 12345
+    "hostname": "app-server-01",
+    "port": 8080,
+    "process_id": 12345,
+    "timestamp": "2026-06-11T14:30:00Z"
   }'
 ```
 
-Re-registration with the same `hostname` + `pid` updates ports and start time (agent restart).
+Re-registration with the same `hostname` + `process_id` updates port and timestamp (agent restart).
 
 ### Deregister an agent
 
@@ -106,8 +104,8 @@ Call on graceful shutdown so ATC stops polling and removes the instance (metric 
 curl -X DELETE http://localhost:8090/api/instances \
   -H 'Content-Type: application/json' \
   -d '{
-    "hostname": "my-host",
-    "pid": 12345
+    "hostname": "app-server-01",
+    "process_id": 12345
   }'
 ```
 
@@ -118,41 +116,44 @@ Returns `204 No Content` on success, `404` if no matching instance exists.
 | Method | Path | Description |
 |--------|------|-------------|
 | PUT | `/api/instances` | Register or update an agent |
-| DELETE | `/api/instances` | Deregister an agent (`hostname` + `pid`) |
+| DELETE | `/api/instances` | Deregister an agent (`hostname` + `process_id`) |
 | GET | `/api/instances` | All registered agents with latest poll snapshot |
 | GET | `/api/instances/{id}` | Single agent status |
 | GET | `/api/instances/{id}/metrics?lookbackMinutes=60` | Time-series snapshots |
 | GET | `/` | Fleet dashboard UI |
 
-The JSON returned by `GET /api/instances` powers the dashboard. Each entry includes `latestMetrics` from the most recent poll:
+The JSON returned by `GET /api/instances` powers the dashboard. Each entry includes `latest_metrics` from the most recent poll:
 
 ```json
 {
   "id": "5d8e7aa8-6c69-404e-8ecb-b27868d36f0d",
-  "hostname": "my-host",
-  "pid": 12345,
+  "hostname": "app-server-01",
+  "process_id": 12345,
+  "port": 8080,
+  "timestamp": "2026-06-11T14:30:00Z",
+  "registered_at": "2026-06-11T14:30:05Z",
   "reachability": "REACHABLE",
-  "latestMetrics": {
-    "capturedAt": "2026-06-11T20:01:00Z",
-    "healthUp": true,
-    "readyUp": true,
-    "filesMonitored": 12,
-    "eventsProcessed": 450000,
-    "bytesRead": 987654321,
-    "pollError": null
+  "latest_metrics": {
+    "captured_at": "2026-06-11T20:01:00Z",
+    "health_up": true,
+    "ready_up": true,
+    "files_monitored": 12,
+    "events_processed": 450000,
+    "bytes_read": 987654321,
+    "poll_error": null
   }
 }
 ```
 
 ## Agent contract (expected by ATC)
 
-When ATC polls an agent it calls:
+When ATC polls an agent it calls all endpoints on the registered **port**:
 
 | Probe | URL | Success |
 |-------|-----|---------|
-| Health | `http://{hostname}:{healthPort}/health` | HTTP 2xx |
-| Ready | `http://{hostname}:{readyPort}/ready` | HTTP 2xx |
-| Metrics | `http://{hostname}:{metricsPort}/metrics` | HTTP 2xx + JSON body |
+| Health | `http://{hostname}:{port}/health` | HTTP 2xx |
+| Ready | `http://{hostname}:{port}/ready` | HTTP 2xx |
+| Metrics | `http://{hostname}:{port}/metrics` | HTTP 2xx + JSON body |
 
 Expected metrics JSON:
 
