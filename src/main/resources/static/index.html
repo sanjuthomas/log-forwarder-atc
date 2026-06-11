@@ -284,10 +284,102 @@
             font-size: 0.8125rem;
         }
 
-        .metric-stack {
+
+        .metric-panel {
+            min-width: 220px;
+        }
+
+        .metric-panel-empty {
+            color: var(--muted);
+            font-size: 0.8125rem;
+            font-style: italic;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.45rem;
+            margin-bottom: 0.55rem;
+        }
+
+        .metric-tile {
+            background: rgba(0, 0, 0, 0.22);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.45rem 0.5rem;
+            min-width: 0;
+        }
+
+        .metric-tile.warn {
+            border-color: rgba(245, 158, 11, 0.45);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .metric-label {
+            display: block;
+            font-size: 0.625rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.15rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .metric-value {
+            display: block;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--text);
+        }
+
+        .metric-meta {
             display: flex;
-            flex-direction: column;
-            gap: 0.15rem;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .metric-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.55rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.18);
+            font-size: 0.75rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .metric-meta-item.warn {
+            border-color: rgba(245, 158, 11, 0.45);
+            color: #fcd34d;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .metric-meta-item strong {
+            color: var(--text);
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-weight: 600;
+        }
+
+        .metric-footnote {
+            margin-top: 0.45rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .metric-error {
+            margin-top: 0.45rem;
+        }
+
+        td.metric-cell {
+            min-width: 240px;
         }
 
         @media (max-width: 720px) {
@@ -355,7 +447,7 @@
                     <th>Reachability</th>
                     <th>Health</th>
                     <th>Ready</th>
-                    <th>Metrics</th>
+                    <th>Forwarder metrics</th>
                     <th>Port</th>
                     <th>Last poll</th>
                     <th>Registered</th>
@@ -369,6 +461,8 @@
 
 <script>
     const REFRESH_MS = 30000;
+    const FAST_REFRESH_MS = 5000;
+    const EVENT_RECONNECT_MS = 5000;
 
     const refreshDot = document.getElementById('refreshDot');
     const refreshStatus = document.getElementById('refreshStatus');
@@ -383,6 +477,8 @@
     const summaryUnknown = document.getElementById('summaryUnknown');
 
     let refreshTimer = null;
+    let fleetEventSource = null;
+    let fleetEventReconnectTimer = null;
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -404,21 +500,6 @@
         return Number(value).toLocaleString();
     }
 
-    function formatBytes(value) {
-        if (value == null) {
-            return '—';
-        }
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        let size = Number(value);
-        let unit = 0;
-        while (size >= 1024 && unit < units.length - 1) {
-            size /= 1024;
-            unit += 1;
-        }
-        const digits = size >= 100 || unit === 0 ? 0 : size >= 10 ? 1 : 2;
-        return `${size.toFixed(digits)} ${units[unit]}`;
-    }
-
     function reachabilityBadge(reachability) {
         switch (reachability) {
             case 'REACHABLE':
@@ -438,6 +519,56 @@
             return '<span class="badge badge-danger"><span class="badge-dot"></span>Down</span>';
         }
         return `<span class="badge badge-muted">${escapeHtml(unknownLabel)}</span>`;
+    }
+
+    function sinkBadge(hibernating) {
+        if (hibernating === true) {
+            return '<span class="badge badge-danger"><span class="badge-dot"></span>Hibernating</span>';
+        }
+        if (hibernating === false) {
+            return '<span class="badge badge-success"><span class="badge-dot"></span>OK</span>';
+        }
+        return '<span class="badge badge-muted">Unknown</span>';
+    }
+
+    function renderMetricsPanel(metrics, pollErrorHtml) {
+        if (!metrics) {
+            return '<div class="metric-panel metric-panel-empty">Not polled yet</div>';
+        }
+
+        const bufferDepth = metrics.pipeline_buffer_depth;
+        const bufferClass = bufferDepth != null && bufferDepth > 0 ? 'metric-meta-item warn' : 'metric-meta-item';
+        const pending = metrics.lines_read != null && metrics.lines_published != null
+            ? Math.max(0, metrics.lines_read - metrics.lines_published)
+            : null;
+        const footnote = pending != null && pending > 0
+            ? `${formatNumber(pending)} line${pending === 1 ? '' : 's'} read but not yet published`
+            : '';
+
+        return `
+            <div class="metric-panel">
+                <div class="metric-grid">
+                    <div class="metric-tile">
+                        <span class="metric-label">Files</span>
+                        <span class="metric-value">${formatNumber(metrics.files_watched)}</span>
+                    </div>
+                    <div class="metric-tile">
+                        <span class="metric-label">Published</span>
+                        <span class="metric-value">${formatNumber(metrics.lines_published)}</span>
+                    </div>
+                    <div class="metric-tile">
+                        <span class="metric-label">Read</span>
+                        <span class="metric-value">${formatNumber(metrics.lines_read)}</span>
+                    </div>
+                </div>
+                <div class="metric-meta">
+                    <span class="${bufferClass}">Buffer <strong>${formatNumber(bufferDepth)}</strong></span>
+                    <span class="metric-meta-item">Sink ${sinkBadge(metrics.publish_hibernating)}</span>
+                </div>
+                ${footnote ? `<div class="metric-footnote">${escapeHtml(footnote)}</div>` : ''}
+                ${pollErrorHtml ? `<div class="metric-error subtle">${pollErrorHtml}</div>` : ''}
+            </div>
+        `;
     }
 
     function setRefreshState(state, text) {
@@ -490,7 +621,7 @@
                 const healthUp = metrics ? metrics.health_up : null;
                 const readyUp = metrics ? metrics.ready_up : null;
                 const pollError = metrics && metrics.poll_error
-                    ? `<div class="subtle">${escapeHtml(metrics.poll_error)}</div>`
+                    ? escapeHtml(metrics.poll_error)
                     : '';
 
                 return `
@@ -503,14 +634,7 @@
                         <td>${reachabilityBadge(instance.reachability)}</td>
                         <td>${probeBadge(healthUp, 'Not polled')}</td>
                         <td>${probeBadge(readyUp, 'Not polled')}</td>
-                        <td>
-                            <div class="metric-stack">
-                                <span>Files: <span class="mono">${formatNumber(metrics && metrics.files_monitored)}</span></span>
-                                <span>Events: <span class="mono">${formatNumber(metrics && metrics.events_processed)}</span></span>
-                                <span>Bytes: <span class="mono">${formatBytes(metrics && metrics.bytes_read)}</span></span>
-                            </div>
-                            ${pollError}
-                        </td>
+                        <td class="metric-cell">${renderMetricsPanel(metrics, pollError)}</td>
                         <td class="mono">${escapeHtml(instance.port)}</td>
                         <td>
                             <div>${formatInstant(metrics && metrics.captured_at)}</div>
@@ -541,8 +665,9 @@
             renderSummary(instances);
             renderTable(instances);
 
+            const intervalMs = scheduleRefresh(instances);
             const refreshedAt = new Date().toLocaleTimeString();
-            setRefreshState('ok', `Updated ${refreshedAt} · auto-refresh every 30s`);
+            setRefreshState('ok', `Updated ${refreshedAt} · auto-refresh every ${refreshIntervalLabel(intervalMs)}`);
         } catch (error) {
             setRefreshState('error', 'Refresh failed');
             setError(error.message || 'Could not load fleet status');
@@ -551,16 +676,48 @@
         }
     }
 
-    function scheduleRefresh() {
+    function needsFastRefresh(instances) {
+        return instances.some(instance =>
+            instance.reachability === 'UNKNOWN' || !instance.latest_metrics
+        );
+    }
+
+    function refreshIntervalLabel(intervalMs) {
+        return intervalMs === FAST_REFRESH_MS ? '5s' : '30s';
+    }
+
+    function scheduleRefresh(instances) {
         if (refreshTimer) {
             clearInterval(refreshTimer);
         }
-        refreshTimer = setInterval(loadFleet, REFRESH_MS);
+        const intervalMs = needsFastRefresh(instances) ? FAST_REFRESH_MS : REFRESH_MS;
+        refreshTimer = setInterval(loadFleet, intervalMs);
+        return intervalMs;
+    }
+
+    function connectFleetEvents() {
+        if (fleetEventReconnectTimer) {
+            clearTimeout(fleetEventReconnectTimer);
+            fleetEventReconnectTimer = null;
+        }
+        if (fleetEventSource) {
+            fleetEventSource.close();
+        }
+
+        fleetEventSource = new EventSource('/api/instances/events');
+        fleetEventSource.addEventListener('fleet-change', () => {
+            loadFleet();
+        });
+        fleetEventSource.onerror = () => {
+            fleetEventSource.close();
+            fleetEventSource = null;
+            fleetEventReconnectTimer = setTimeout(connectFleetEvents, EVENT_RECONNECT_MS);
+        };
     }
 
     refreshBtn.addEventListener('click', loadFleet);
     loadFleet();
-    scheduleRefresh();
+    connectFleetEvents();
 </script>
 </body>
 </html>

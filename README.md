@@ -1,6 +1,6 @@
 # Log Forwarder ATC
 
-Air Traffic Controller for **log-forwarder** agents. Agents register on startup; ATC stores registry data in PostgreSQL and polls each agent every minute for health, readiness, and metrics. Metric snapshots are stored in a **TimescaleDB** hypertable (PostgreSQL extension) for time-series queries. A built-in **fleet dashboard** at `/` shows registered agents and live status.
+Air Traffic Controller for **log-forwarder** agents. Agents register on startup; ATC stores registry data in PostgreSQL and polls each agent every **30 seconds** for health, readiness, and metrics. Registration and deregistration are pushed to the fleet dashboard over SSE; health/ready status continues on the scheduled poll. Metric snapshots are stored in a **TimescaleDB** hypertable (PostgreSQL extension) for time-series queries. A built-in **fleet dashboard** at `/` shows registered agents and live status.
 
 ## Architecture
 
@@ -18,6 +18,7 @@ flowchart LR
     ATC -->|poll /health /ready /metrics| Agent1
     ATC -->|poll /health /ready /metrics| Agent2
     ATC -->|poll /health /ready /metrics| Agent3
+    ATC -->|SSE fleet-change| Dashboard[Fleet dashboard]
     ATC --> DB
 ```
 
@@ -53,7 +54,7 @@ ATC listens on **8090** by default.
 
 Open **http://localhost:8090/** in a browser.
 
-The dashboard is a static page served from `src/main/resources/static/index.html` (same pattern as [kafka-web-clients](https://github.com/sanjuthomas/kafka-web-clients)). It polls `GET /api/instances` and refreshes automatically every **30 seconds**. Use **Refresh now** for an immediate update.
+The dashboard is a static page served from `src/main/resources/static/index.html` (same pattern as [kafka-web-clients](https://github.com/sanjuthomas/kafka-web-clients)). It loads fleet status from `GET /api/instances` and listens for live updates on `GET /api/instances/events` (Server-Sent Events). Registration and deregistration refresh the table immediately; health, ready, and metrics refresh on the **30 second** poll cycle (or immediately after an agent registers). Use **Refresh now** for a manual update.
 
 **Summary cards** at the top show fleet counts:
 
@@ -72,14 +73,24 @@ The dashboard is a static page served from `src/main/resources/static/index.html
 | Process ID | Process ID (unique per host) |
 | Reachability | `REACHABLE`, `UNREACHABLE`, or `UNKNOWN` |
 | Health / Ready | Result of the latest `/health` and `/ready` probes |
-| Metrics | Files monitored, events processed, and bytes read |
+| Forwarder metrics | Tile grid: files watched, lines published/read, pipeline buffer, sink state |
 | Port | Agent HTTP port (health, ready, and metrics) |
 | Last poll | Timestamp of the latest metrics snapshot |
 | Registered | Registration time and agent start time |
 
 Status badges use green (up / reachable), red (down / unreachable), and gray (unknown / not polled). If no agents are registered, an empty state explains that agents must call `PUT /api/instances` on startup.
 
-Poll data appears after ATC’s first scheduled poll (default **every 60 seconds**), so a newly registered agent may show `UNKNOWN` briefly before the first snapshot.
+Poll data appears after ATC’s first scheduled poll (default **every 30 seconds**), or immediately when an agent registers. The dashboard receives **registration** and **deregistration** events over SSE and reloads the fleet table right away.
+
+**Forwarder metrics panel** (per agent):
+
+| Tile / pill | Source metric | Notes |
+|-------------|---------------|-------|
+| Files | `log_forwarder_files_watched` | Log files currently tailed |
+| Published | `log_forwarder_lines_published_total` | Lines sent to the sink |
+| Read | `log_forwarder_lines_read_total` | Lines read from watched files |
+| Buffer | `log_forwarder_pipeline_buffer_depth` | Highlighted when backlog &gt; 0 |
+| Sink | `log_forwarder_publish_hibernating` | OK or Hibernating badge |
 
 ### 4. Register an agent
 
@@ -103,7 +114,7 @@ curl -X PUT http://localhost:8090/api/instances \
   }'
 ```
 
-Returns **`201 Created`** for a new agent or **`200 OK`** when re-registering the same `hostname` + `process_id` (updates `port` and `timestamp`).
+Returns **`201 Created`** for a new agent or **`200 OK`** when re-registering the same `hostname` + `process_id` (updates `port` and `timestamp`). ATC immediately probes `/health`, `/ready`, and `/metrics` for the agent and broadcasts a dashboard update over SSE.
 
 **Example response** (`201 Created`):
 
@@ -135,7 +146,7 @@ curl -X DELETE http://localhost:8090/api/instances \
   }'
 ```
 
-Returns `204 No Content` on success, `404` if no matching instance exists.
+Returns `204 No Content` on success, `404` if no matching instance exists. A **deregistration** SSE event is broadcast to connected dashboards.
 
 ### 5. REST API
 
@@ -145,8 +156,22 @@ Returns `204 No Content` on success, `404` if no matching instance exists.
 | DELETE | `/api/instances` | Deregister an agent (`hostname` + `process_id`) |
 | GET | `/api/instances` | All registered agents with latest poll snapshot |
 | GET | `/api/instances/{id}` | Single agent status |
+| GET | `/api/instances/events` | SSE stream of registration/deregistration events (`fleet-change`) |
 | GET | `/api/instances/{id}/metrics?lookbackMinutes=60` | Time-series snapshots |
 | GET | `/` | Fleet dashboard UI |
+
+**SSE event** (`event: fleet-change`):
+
+```json
+{
+  "type": "REGISTERED",
+  "instance_id": "5fa00872-bd58-44f2-b3a0-d0653fba5fd8",
+  "hostname": "app-server-01",
+  "process_id": 12345
+}
+```
+
+`type` is `REGISTERED` or `DEREGISTERED`.
 
 The JSON returned by `GET /api/instances` powers the dashboard. Each entry includes `latest_metrics` from the most recent poll:
 
@@ -163,9 +188,11 @@ The JSON returned by `GET /api/instances` powers the dashboard. Each entry inclu
     "captured_at": "2026-06-11T20:01:00Z",
     "health_up": true,
     "ready_up": true,
-    "files_monitored": 12,
-    "events_processed": 450000,
-    "bytes_read": 987654321,
+    "files_watched": 1,
+    "lines_published": 68,
+    "lines_read": 69,
+    "pipeline_buffer_depth": 0,
+    "publish_hibernating": false,
     "poll_error": null
   }
 }
@@ -177,18 +204,48 @@ When ATC polls an agent it calls all endpoints on the registered **port**:
 
 | Probe | URL | Success |
 |-------|-----|---------|
-| Health | `http://{hostname}:{port}/health` | HTTP 2xx |
-| Ready | `http://{hostname}:{port}/ready` | HTTP 2xx |
-| Metrics | `http://{hostname}:{port}/metrics` | HTTP 2xx + JSON body |
+| Health | `http://{hostname}:{port}/health` | HTTP 2xx + JSON body with matching `process_id` |
+| Ready | `http://{hostname}:{port}/ready` | HTTP 2xx + JSON body with matching `process_id` |
+| Metrics | `http://{hostname}:{port}/metrics` | HTTP 2xx + OpenMetrics/Prometheus text body |
 
-Expected metrics JSON:
+Expected health JSON:
 
 ```json
 {
-  "filesMonitored": 12,
-  "eventsProcessed": 450000,
-  "bytesRead": 987654321
+  "status": "UP",
+  "process_id": 12345
 }
+```
+
+Expected ready JSON:
+
+```json
+{
+  "status": "READY",
+  "process_id": 12345
+}
+```
+
+The `process_id` in each probe response must match the value registered via `PUT /api/instances`. A mismatch marks that probe as down and is recorded in `poll_error`.
+
+Expected metrics excerpt (OpenMetrics text). ATC parses these five series for the dashboard:
+
+| Prometheus metric | Dashboard field |
+|-------------------|-----------------|
+| `log_forwarder_files_watched` | Files watched |
+| `log_forwarder_lines_published_total` | Lines published |
+| `log_forwarder_lines_read_total` | Lines read |
+| `log_forwarder_pipeline_buffer_depth` | Pipeline buffer depth |
+| `log_forwarder_publish_hibernating` | Sink hibernating (`1` = failing) |
+
+Example:
+
+```text
+log_forwarder_files_watched 1
+log_forwarder_lines_published_total 68
+log_forwarder_lines_read_total 69
+log_forwarder_pipeline_buffer_depth 0
+log_forwarder_publish_hibernating 0
 ```
 
 Paths are configurable via `atc.agent.*` in `application.yml`.
@@ -202,13 +259,21 @@ Paths are configurable via `atc.agent.*` in `application.yml`.
 | `DB_PORT` | `5432` | PostgreSQL port |
 | `DB_NAME` | `log_forwarder_atc` | Database name |
 | `DB_USER` / `DB_PASSWORD` | `atc` / `atc` | Credentials |
-| `ATC_POLLING_INTERVAL_MS` | `60000` | Poll interval (fixed delay) |
+| `ATC_POLLING_INTERVAL_MS` | `30000` | Poll interval for `/health`, `/ready`, and `/metrics` (fixed delay) |
 
 ## Build
 
 ```bash
 mvn clean package
 ```
+
+## Tests
+
+```bash
+mvn verify
+```
+
+Unit and web-layer tests cover registration/deregistration (including SSE broadcast hooks), Prometheus metrics parsing, health/ready `process_id` validation, and bundled dashboard assets.
 
 ## CI
 

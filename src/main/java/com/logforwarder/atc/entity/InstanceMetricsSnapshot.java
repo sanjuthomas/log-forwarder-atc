@@ -30,14 +30,20 @@ public class InstanceMetricsSnapshot {
     @Column(name = "ready_up", nullable = false)
     private boolean readyUp;
 
-    @Column(name = "files_monitored")
-    private Long filesMonitored;
+    @Column(name = "files_watched")
+    private Long filesWatched;
 
-    @Column(name = "events_processed")
-    private Long eventsProcessed;
+    @Column(name = "lines_published")
+    private Long linesPublished;
 
-    @Column(name = "bytes_read")
-    private Long bytesRead;
+    @Column(name = "lines_read")
+    private Long linesRead;
+
+    @Column(name = "pipeline_buffer_depth")
+    private Long pipelineBufferDepth;
+
+    @Column(name = "publish_hibernating")
+    private Boolean publishHibernating;
 
     @Column(name = "poll_error", length = 512)
     private String pollError;
@@ -50,9 +56,11 @@ public class InstanceMetricsSnapshot {
             Instant time,
             boolean healthUp,
             boolean readyUp,
-            Long filesMonitored,
-            Long eventsProcessed,
-            Long bytesRead,
+            Long filesWatched,
+            Long linesPublished,
+            Long linesRead,
+            Long pipelineBufferDepth,
+            Boolean publishHibernating,
             String pollError
     ) {
         InstanceMetricsSnapshot snapshot = new InstanceMetricsSnapshot();
@@ -60,9 +68,11 @@ public class InstanceMetricsSnapshot {
         snapshot.time = time;
         snapshot.healthUp = healthUp;
         snapshot.readyUp = readyUp;
-        snapshot.filesMonitored = filesMonitored;
-        snapshot.eventsProcessed = eventsProcessed;
-        snapshot.bytesRead = bytesRead;
+        snapshot.filesWatched = filesWatched;
+        snapshot.linesPublished = linesPublished;
+        snapshot.linesRead = linesRead;
+        snapshot.pipelineBufferDepth = pipelineBufferDepth;
+        snapshot.publishHibernating = publishHibernating;
         snapshot.pollError = pollError;
         return snapshot;
     }
@@ -83,16 +93,24 @@ public class InstanceMetricsSnapshot {
         return readyUp;
     }
 
-    public Long getFilesMonitored() {
-        return filesMonitored;
+    public Long getFilesWatched() {
+        return filesWatched;
     }
 
-    public Long getEventsProcessed() {
-        return eventsProcessed;
+    public Long getLinesPublished() {
+        return linesPublished;
     }
 
-    public Long getBytesRead() {
-        return bytesRead;
+    public Long getLinesRead() {
+        return linesRead;
+    }
+
+    public Long getPipelineBufferDepth() {
+        return pipelineBufferDepth;
+    }
+
+    public Boolean getPublishHibernating() {
+        return publishHibernating;
     }
 
     public String getPollError() {

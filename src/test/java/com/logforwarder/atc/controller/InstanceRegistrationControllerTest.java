@@ -1,8 +1,13 @@
 package com.logforwarder.atc.controller;
 
 import com.logforwarder.atc.dto.DeregistrationRequest;
+import com.logforwarder.atc.dto.DeregisteredInstance;
+import com.logforwarder.atc.dto.FleetChangeEvent;
 import com.logforwarder.atc.dto.RegistrationRequest;
 import com.logforwarder.atc.dto.RegistrationResponse;
+import com.logforwarder.atc.domain.Reachability;
+import com.logforwarder.atc.service.FleetEventBroadcaster;
+import com.logforwarder.atc.service.InstancePollingService;
 import com.logforwarder.atc.service.InstanceRegistrationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +20,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -33,20 +40,37 @@ class InstanceRegistrationControllerTest {
     @MockBean
     private InstanceRegistrationService registrationService;
 
+    @MockBean
+    private InstancePollingService pollingService;
+
+    @MockBean
+    private FleetEventBroadcaster fleetEventBroadcaster;
+
     @Test
     void registerReturnsCreatedForNewInstance() throws Exception {
         UUID id = UUID.randomUUID();
-        when(registrationService.register(any(RegistrationRequest.class)))
-                .thenReturn(new RegistrationResponse(
-                        id,
-                        "host-1",
-                        999,
-                        Instant.parse("2026-06-11T16:00:00Z"),
-                        8080,
-                        Instant.parse("2026-06-11T16:01:00Z"),
-                        com.logforwarder.atc.domain.Reachability.UNKNOWN,
-                        true
-                ));
+        RegistrationResponse registered = new RegistrationResponse(
+                id,
+                "host-1",
+                999,
+                Instant.parse("2026-06-11T16:00:00Z"),
+                8080,
+                Instant.parse("2026-06-11T16:01:00Z"),
+                Reachability.UNKNOWN,
+                true
+        );
+        RegistrationResponse polled = new RegistrationResponse(
+                id,
+                "host-1",
+                999,
+                Instant.parse("2026-06-11T16:00:00Z"),
+                8080,
+                Instant.parse("2026-06-11T16:01:00Z"),
+                Reachability.REACHABLE,
+                true
+        );
+        when(registrationService.register(any(RegistrationRequest.class))).thenReturn(registered);
+        when(registrationService.getRegistrationResponse(eq(id), eq(true))).thenReturn(polled);
 
         mockMvc.perform(put("/api/instances")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,11 +87,19 @@ class InstanceRegistrationControllerTest {
                 .andExpect(jsonPath("$.hostname").value("host-1"))
                 .andExpect(jsonPath("$.process_id").value(999))
                 .andExpect(jsonPath("$.port").value(8080))
-                .andExpect(jsonPath("$.created").value(true));
+                .andExpect(jsonPath("$.created").value(true))
+                .andExpect(jsonPath("$.reachability").value("REACHABLE"));
+
+        verify(pollingService).pollInstance(id);
+        verify(fleetEventBroadcaster).broadcast(FleetChangeEvent.registered(polled));
     }
 
     @Test
     void deregisterReturnsNoContent() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(registrationService.deregister(any(DeregistrationRequest.class)))
+                .thenReturn(new DeregisteredInstance(id, "host-1", 999));
+
         mockMvc.perform(delete("/api/instances")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -77,6 +109,10 @@ class InstanceRegistrationControllerTest {
                                 }
                                 """))
                 .andExpect(status().isNoContent());
+
+        verify(fleetEventBroadcaster).broadcast(
+                FleetChangeEvent.deregistered(new DeregisteredInstance(id, "host-1", 999))
+        );
     }
 
     @Test

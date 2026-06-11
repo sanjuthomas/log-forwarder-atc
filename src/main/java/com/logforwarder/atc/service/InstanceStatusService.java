@@ -78,9 +78,11 @@ public class InstanceStatusService {
                 snapshot.getTime(),
                 snapshot.isHealthUp(),
                 snapshot.isReadyUp(),
-                snapshot.getFilesMonitored(),
-                snapshot.getEventsProcessed(),
-                snapshot.getBytesRead(),
+                snapshot.getFilesWatched(),
+                snapshot.getLinesPublished(),
+                snapshot.getLinesRead(),
+                snapshot.getPipelineBufferDepth(),
+                snapshot.getPublishHibernating(),
                 snapshot.getPollError()
         );
     }
@@ -91,9 +93,11 @@ public class InstanceStatusService {
                 snapshot.getTime(),
                 snapshot.isHealthUp(),
                 snapshot.isReadyUp(),
-                snapshot.getFilesMonitored(),
-                snapshot.getEventsProcessed(),
-                snapshot.getBytesRead(),
+                snapshot.getFilesWatched(),
+                snapshot.getLinesPublished(),
+                snapshot.getLinesRead(),
+                snapshot.getPipelineBufferDepth(),
+                snapshot.getPublishHibernating(),
                 snapshot.getPollError()
         );
     }

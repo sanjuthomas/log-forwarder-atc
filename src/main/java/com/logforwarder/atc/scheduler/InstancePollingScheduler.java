@@ -13,7 +13,7 @@ public class InstancePollingScheduler {
         this.pollingService = pollingService;
     }
 
-    @Scheduled(fixedDelayString = "${atc.polling.interval-ms:60000}")
+    @Scheduled(fixedDelayString = "${atc.polling.interval-ms:30000}")
     public void pollRegisteredInstances() {
         pollingService.pollAllInstances();
     }

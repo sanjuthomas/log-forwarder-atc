@@ -1,8 +1,10 @@
 package com.logforwarder.atc.dto;
 
 public record AgentMetricsResponse(
-        Long filesMonitored,
-        Long eventsProcessed,
-        Long bytesRead
+        Long filesWatched,
+        Long linesPublished,
+        Long linesRead,
+        Long pipelineBufferDepth,
+        Boolean publishHibernating
 ) {
 }

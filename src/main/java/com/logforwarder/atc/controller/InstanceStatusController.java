@@ -2,12 +2,15 @@ package com.logforwarder.atc.controller;
 
 import com.logforwarder.atc.dto.InstanceSummaryResponse;
 import com.logforwarder.atc.dto.MetricsSnapshotResponse;
+import com.logforwarder.atc.service.FleetEventBroadcaster;
 import com.logforwarder.atc.service.InstanceStatusService;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.Duration;
 import java.util.List;
@@ -18,9 +21,19 @@ import java.util.UUID;
 public class InstanceStatusController {
 
     private final InstanceStatusService statusService;
+    private final FleetEventBroadcaster fleetEventBroadcaster;
 
-    public InstanceStatusController(InstanceStatusService statusService) {
+    public InstanceStatusController(
+            InstanceStatusService statusService,
+            FleetEventBroadcaster fleetEventBroadcaster
+    ) {
         this.statusService = statusService;
+        this.fleetEventBroadcaster = fleetEventBroadcaster;
+    }
+
+    @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamFleetEvents() {
+        return fleetEventBroadcaster.subscribe();
     }
 
     @GetMapping

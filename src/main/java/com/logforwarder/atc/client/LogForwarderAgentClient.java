@@ -2,6 +2,7 @@ package com.logforwarder.atc.client;
 
 import com.logforwarder.atc.config.AtcProperties;
 import com.logforwarder.atc.dto.AgentMetricsResponse;
+import com.logforwarder.atc.dto.AgentProbeResponse;
 import com.logforwarder.atc.entity.LogForwarderInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,8 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class LogForwarderAgentClient {
@@ -29,48 +32,88 @@ public class LogForwarderAgentClient {
     public AgentPollResult poll(LogForwarderInstance instance) {
         String baseHost = instance.getHostname();
         int port = instance.getPort();
-        boolean healthUp = probeEndpoint(baseHost, port, properties.agent().healthPath());
-        boolean readyUp = probeEndpoint(baseHost, port, properties.agent().readyPath());
+        long expectedProcessId = instance.getProcessId();
+
+        ProbeOutcome health = probeEndpoint(baseHost, port, properties.agent().healthPath(), expectedProcessId, "Health");
+        ProbeOutcome ready = probeEndpoint(baseHost, port, properties.agent().readyPath(), expectedProcessId, "Ready");
         AgentMetricsResponse metrics = fetchMetrics(baseHost, port);
 
-        String error = null;
-        if (!healthUp && !readyUp && metrics == null) {
-            error = "All agent probes failed";
-        }
+        String error = buildPollError(health, ready, metrics);
 
-        return new AgentPollResult(healthUp, readyUp, metrics, error);
+        return new AgentPollResult(health.success(), ready.success(), metrics, error);
     }
 
-    private boolean probeEndpoint(String hostname, int port, String path) {
+    static String buildPollError(ProbeOutcome health, ProbeOutcome ready, AgentMetricsResponse metrics) {
+        List<String> errors = new ArrayList<>();
+        if (health.error() != null) {
+            errors.add(health.error());
+        }
+        if (ready.error() != null) {
+            errors.add(ready.error());
+        }
+        if (!health.success() && !ready.success() && metrics == null && errors.isEmpty()) {
+            errors.add("All agent probes failed");
+        }
+        if (errors.isEmpty()) {
+            return null;
+        }
+        return String.join("; ", errors);
+    }
+
+    static ProbeOutcome validateProbeResponse(AgentProbeResponse response, long expectedProcessId, String probeName) {
+        if (response == null) {
+            return ProbeOutcome.failure(probeName + " probe returned empty body");
+        }
+        if (response.processId() != expectedProcessId) {
+            return ProbeOutcome.failure(
+                    "%s probe process_id mismatch: expected %d, got %d"
+                            .formatted(probeName, expectedProcessId, response.processId())
+            );
+        }
+        return ProbeOutcome.ok();
+    }
+
+    private ProbeOutcome probeEndpoint(
+            String hostname,
+            int port,
+            String path,
+            long expectedProcessId,
+            String probeName
+    ) {
         String url = agentUrl(hostname, port, path);
         try {
-            webClient.get()
+            AgentProbeResponse body = webClient.get()
                     .uri(url)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, response -> response.createException())
-                    .toBodilessEntity()
+                    .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.createException())
+                    .bodyToMono(AgentProbeResponse.class)
                     .timeout(readTimeout())
                     .block();
-            return true;
+            ProbeOutcome outcome = validateProbeResponse(body, expectedProcessId, probeName);
+            if (!outcome.success()) {
+                log.debug("Agent probe {} failed validation: {}", url, outcome.error());
+            }
+            return outcome;
         } catch (WebClientResponseException ex) {
             log.debug("Agent probe {} returned HTTP {}: {}", url, ex.getStatusCode().value(), ex.getMessage());
-            return false;
+            return ProbeOutcome.failure(probeName + " probe returned HTTP " + ex.getStatusCode().value());
         } catch (RuntimeException ex) {
             log.debug("Agent probe {} failed: {}", url, rootMessage(ex));
-            return false;
+            return ProbeOutcome.failure(probeName + " probe failed: " + rootMessage(ex));
         }
     }
 
     private AgentMetricsResponse fetchMetrics(String hostname, int port) {
         String url = agentUrl(hostname, port, properties.agent().metricsPath());
         try {
-            return webClient.get()
+            String body = webClient.get()
                     .uri(url)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, response -> response.createException())
-                    .bodyToMono(AgentMetricsResponse.class)
+                    .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.createException())
+                    .bodyToMono(String.class)
                     .timeout(readTimeout())
                     .block();
+            return PrometheusMetricsParser.parse(body);
         } catch (RuntimeException ex) {
             log.debug("Agent metrics {} failed: {}", url, rootMessage(ex));
             return null;
@@ -94,6 +137,16 @@ public class LogForwarderAgentClient {
             return requestException.getMessage();
         }
         return root.getMessage() != null ? root.getMessage() : ex.getClass().getSimpleName();
+    }
+
+    record ProbeOutcome(boolean success, String error) {
+        static ProbeOutcome ok() {
+            return new ProbeOutcome(true, null);
+        }
+
+        static ProbeOutcome failure(String error) {
+            return new ProbeOutcome(false, error);
+        }
     }
 
     public record AgentPollResult(

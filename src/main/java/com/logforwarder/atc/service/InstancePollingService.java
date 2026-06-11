@@ -9,11 +9,14 @@ import com.logforwarder.atc.repository.InstanceMetricsSnapshotRepository;
 import com.logforwarder.atc.repository.LogForwarderInstanceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class InstancePollingService {
@@ -32,6 +35,13 @@ public class InstancePollingService {
         this.instanceRepository = instanceRepository;
         this.metricsRepository = metricsRepository;
         this.agentClient = agentClient;
+    }
+
+    @Transactional
+    public void pollInstance(UUID id) {
+        LogForwarderInstance instance = instanceRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Instance not found"));
+        pollInstance(instance);
     }
 
     @Transactional
@@ -62,9 +72,11 @@ public class InstancePollingService {
                 now,
                 result.healthUp(),
                 result.readyUp(),
-                metrics != null ? metrics.filesMonitored() : null,
-                metrics != null ? metrics.eventsProcessed() : null,
-                metrics != null ? metrics.bytesRead() : null,
+                metrics != null ? metrics.filesWatched() : null,
+                metrics != null ? metrics.linesPublished() : null,
+                metrics != null ? metrics.linesRead() : null,
+                metrics != null ? metrics.pipelineBufferDepth() : null,
+                metrics != null ? metrics.publishHibernating() : null,
                 result.error()
         );
         metricsRepository.save(snapshot);

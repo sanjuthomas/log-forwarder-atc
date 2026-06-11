@@ -2,6 +2,7 @@ package com.logforwarder.atc.service;
 
 import com.logforwarder.atc.domain.Reachability;
 import com.logforwarder.atc.dto.DeregistrationRequest;
+import com.logforwarder.atc.dto.DeregisteredInstance;
 import com.logforwarder.atc.dto.RegistrationRequest;
 import com.logforwarder.atc.dto.RegistrationResponse;
 import com.logforwarder.atc.entity.LogForwarderInstance;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 public class InstanceRegistrationService {
@@ -48,8 +50,15 @@ public class InstanceRegistrationService {
         return toResponse(instance, true);
     }
 
+    @Transactional(readOnly = true)
+    public RegistrationResponse getRegistrationResponse(UUID id, boolean created) {
+        LogForwarderInstance instance = instanceRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Instance not found"));
+        return toResponse(instance, created);
+    }
+
     @Transactional
-    public void deregister(DeregistrationRequest request) {
+    public DeregisteredInstance deregister(DeregistrationRequest request) {
         LogForwarderInstance instance = instanceRepository.findByHostnameAndProcessId(
                         request.hostname(),
                         request.processId()
@@ -59,7 +68,13 @@ public class InstanceRegistrationService {
                         "No log-forwarder instance registered for hostname=%s process_id=%d"
                                 .formatted(request.hostname(), request.processId())
                 ));
+        DeregisteredInstance removed = new DeregisteredInstance(
+                instance.getId(),
+                instance.getHostname(),
+                instance.getProcessId()
+        );
         instanceRepository.delete(instance);
+        return removed;
     }
 
     private RegistrationResponse toResponse(LogForwarderInstance instance, boolean created) {

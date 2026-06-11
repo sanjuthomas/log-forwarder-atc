@@ -21,9 +21,11 @@ public record InstanceSummaryResponse(
             @JsonProperty("captured_at") Instant capturedAt,
             @JsonProperty("health_up") boolean healthUp,
             @JsonProperty("ready_up") boolean readyUp,
-            @JsonProperty("files_monitored") Long filesMonitored,
-            @JsonProperty("events_processed") Long eventsProcessed,
-            @JsonProperty("bytes_read") Long bytesRead,
+            @JsonProperty("files_watched") Long filesWatched,
+            @JsonProperty("lines_published") Long linesPublished,
+            @JsonProperty("lines_read") Long linesRead,
+            @JsonProperty("pipeline_buffer_depth") Long pipelineBufferDepth,
+            @JsonProperty("publish_hibernating") Boolean publishHibernating,
             @JsonProperty("poll_error") String pollError
     ) {
     }
