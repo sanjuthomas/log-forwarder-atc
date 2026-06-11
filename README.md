@@ -83,6 +83,15 @@ Poll data appears after ATC’s first scheduled poll (default **every 60 seconds
 
 ### 4. Register an agent
 
+**Request body** (`PUT /api/instances`, `Content-Type: application/json`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `hostname` | string | Host where the agent runs |
+| `port` | integer | Single HTTP port for `/health`, `/ready`, and `/metrics` (1–65535) |
+| `process_id` | integer | OS process ID; unique per host |
+| `timestamp` | string (ISO-8601) | Agent start time (UTC), e.g. `2026-06-11T14:30:00Z` |
+
 ```bash
 curl -X PUT http://localhost:8090/api/instances \
   -H 'Content-Type: application/json' \
@@ -94,7 +103,24 @@ curl -X PUT http://localhost:8090/api/instances \
   }'
 ```
 
-Re-registration with the same `hostname` + `process_id` updates port and timestamp (agent restart).
+Returns **`201 Created`** for a new agent or **`200 OK`** when re-registering the same `hostname` + `process_id` (updates `port` and `timestamp`).
+
+**Example response** (`201 Created`):
+
+```json
+{
+  "id": "5fa00872-bd58-44f2-b3a0-d0653fba5fd8",
+  "hostname": "app-server-01",
+  "process_id": 12345,
+  "timestamp": "2026-06-11T14:30:00Z",
+  "port": 8080,
+  "registered_at": "2026-06-11T23:08:51.269683Z",
+  "reachability": "UNKNOWN",
+  "created": true
+}
+```
+
+Re-registration with the same `hostname` + `process_id` updates port and timestamp (agent restart) and returns `"created": false`.
 
 ### Deregister an agent
 
