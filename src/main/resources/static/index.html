@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Forwarder ATC</title>
+    <style>
+        :root {
+            --bg: #0f1419;
+            --surface: #1a2332;
+            --border: #2d3a4f;
+            --text: #e7ecf3;
+            --muted: #8b9cb3;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --record-bg: #111827;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 3rem;
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        header h1 {
+            margin: 0 0 0.35rem;
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.9375rem;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .status-dot.ok { background: var(--success); }
+        .status-dot.warn { background: var(--warning); animation: pulse 1.5s infinite; }
+        .status-dot.error { background: var(--danger); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.1rem;
+        }
+
+        .summary-card .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            margin-bottom: 0.35rem;
+        }
+
+        .summary-card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .summary-card.success .value { color: var(--success); }
+        .summary-card.danger .value { color: var(--danger); }
+        .summary-card.warning .value { color: var(--warning); }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+        }
+
+        button {
+            padding: 0.55rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--muted);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--record-bg);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        th, td {
+            padding: 0.75rem 0.85rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            font-weight: 600;
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(59, 130, 246, 0.06);
+        }
+
+        .mono {
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 0.8125rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .badge-success {
+            color: #86efac;
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .badge-danger {
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .badge-muted {
+            color: var(--muted);
+            background: rgba(139, 156, 179, 0.12);
+        }
+
+        .badge-warning {
+            color: #fcd34d;
+            background: rgba(245, 158, 11, 0.15);
+        }
+
+        .empty-state {
+            padding: 3rem 1.5rem;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .empty-state strong {
+            display: block;
+            color: var(--text);
+            font-size: 1rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .alert {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            line-height: 1.45;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            background: rgba(239, 68, 68, 0.12);
+            color: #fca5a5;
+        }
+
+        .hidden { display: none !important; }
+
+        .subtle {
+            color: var(--muted);
+            font-size: 0.8125rem;
+        }
+
+        .metric-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        @media (max-width: 720px) {
+            .container {
+                padding: 1.25rem 1rem 2rem;
+            }
+
+            th, td {
+                padding: 0.65rem 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>Log Forwarder ATC</h1>
+            <p>Fleet status for registered log-forwarder agents</p>
+        </div>
+        <div class="status-bar">
+            <span id="refreshDot" class="status-dot ok"></span>
+            <span id="refreshStatus">Loading fleet...</span>
+        </div>
+    </header>
+
+    <div id="errorBanner" class="alert hidden"></div>
+
+    <section class="summary-grid" aria-label="Fleet summary">
+        <div class="summary-card">
+            <div class="label">Registered</div>
+            <div id="summaryTotal" class="value">—</div>
+        </div>
+        <div class="summary-card success">
+            <div class="label">Reachable</div>
+            <div id="summaryReachable" class="value">—</div>
+        </div>
+        <div class="summary-card danger">
+            <div class="label">Unreachable</div>
+            <div id="summaryUnreachable" class="value">—</div>
+        </div>
+        <div class="summary-card warning">
+            <div class="label">Unknown</div>
+            <div id="summaryUnknown" class="value">—</div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-header">
+            <h2>Registered agents</h2>
+            <button id="refreshBtn" type="button" class="btn-secondary">Refresh now</button>
+        </div>
+
+        <div id="emptyState" class="empty-state hidden">
+            <strong>No agents registered yet</strong>
+            Agents call <span class="mono">PUT /api/instances</span> on startup. This page refreshes automatically every 30 seconds.
+        </div>
+
+        <div id="tableWrap" class="table-wrap hidden">
+            <table>
+                <thead>
+                <tr>
+                    <th>Host</th>
+                    <th>PID</th>
+                    <th>Reachability</th>
+                    <th>Health</th>
+                    <th>Ready</th>
+                    <th>Metrics</th>
+                    <th>Ports</th>
+                    <th>Last poll</th>
+                    <th>Registered</th>
+                </tr>
+                </thead>
+                <tbody id="instanceRows"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script>
+    const REFRESH_MS = 30000;
+
+    const refreshDot = document.getElementById('refreshDot');
+    const refreshStatus = document.getElementById('refreshStatus');
+    const errorBanner = document.getElementById('errorBanner');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const emptyState = document.getElementById('emptyState');
+    const tableWrap = document.getElementById('tableWrap');
+    const instanceRows = document.getElementById('instanceRows');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const summaryReachable = document.getElementById('summaryReachable');
+    const summaryUnreachable = document.getElementById('summaryUnreachable');
+    const summaryUnknown = document.getElementById('summaryUnknown');
+
+    let refreshTimer = null;
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    function formatInstant(value) {
+        if (!value) {
+            return '—';
+        }
+        return new Date(value).toLocaleString();
+    }
+
+    function formatNumber(value) {
+        if (value == null) {
+            return '—';
+        }
+        return Number(value).toLocaleString();
+    }
+
+    function formatBytes(value) {
+        if (value == null) {
+            return '—';
+        }
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let size = Number(value);
+        let unit = 0;
+        while (size >= 1024 && unit < units.length - 1) {
+            size /= 1024;
+            unit += 1;
+        }
+        const digits = size >= 100 || unit === 0 ? 0 : size >= 10 ? 1 : 2;
+        return `${size.toFixed(digits)} ${units[unit]}`;
+    }
+
+    function reachabilityBadge(reachability) {
+        switch (reachability) {
+            case 'REACHABLE':
+                return '<span class="badge badge-success"><span class="badge-dot"></span>Reachable</span>';
+            case 'UNREACHABLE':
+                return '<span class="badge badge-danger"><span class="badge-dot"></span>Unreachable</span>';
+            default:
+                return '<span class="badge badge-muted"><span class="badge-dot"></span>Unknown</span>';
+        }
+    }
+
+    function probeBadge(up, unknownLabel) {
+        if (up === true) {
+            return '<span class="badge badge-success"><span class="badge-dot"></span>Up</span>';
+        }
+        if (up === false) {
+            return '<span class="badge badge-danger"><span class="badge-dot"></span>Down</span>';
+        }
+        return `<span class="badge badge-muted">${escapeHtml(unknownLabel)}</span>`;
+    }
+
+    function setRefreshState(state, text) {
+        refreshDot.className = 'status-dot ' + state;
+        refreshStatus.textContent = text;
+    }
+
+    function setError(message) {
+        if (!message) {
+            errorBanner.classList.add('hidden');
+            errorBanner.textContent = '';
+            return;
+        }
+        errorBanner.textContent = message;
+        errorBanner.classList.remove('hidden');
+    }
+
+    function renderSummary(instances) {
+        const counts = { REACHABLE: 0, UNREACHABLE: 0, UNKNOWN: 0 };
+        instances.forEach(instance => {
+            const key = instance.reachability || 'UNKNOWN';
+            counts[key] = (counts[key] || 0) + 1;
+        });
+
+        summaryTotal.textContent = String(instances.length);
+        summaryReachable.textContent = String(counts.REACHABLE || 0);
+        summaryUnreachable.textContent = String(counts.UNREACHABLE || 0);
+        summaryUnknown.textContent = String(counts.UNKNOWN || 0);
+    }
+
+    function renderTable(instances) {
+        if (!instances.length) {
+            tableWrap.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            instanceRows.innerHTML = '';
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        tableWrap.classList.remove('hidden');
+
+        instanceRows.innerHTML = instances
+            .slice()
+            .sort((a, b) => {
+                const host = a.hostname.localeCompare(b.hostname);
+                return host !== 0 ? host : a.pid - b.pid;
+            })
+            .map(instance => {
+                const metrics = instance.latestMetrics;
+                const healthUp = metrics ? metrics.healthUp : null;
+                const readyUp = metrics ? metrics.readyUp : null;
+                const pollError = metrics && metrics.pollError
+                    ? `<div class="subtle">${escapeHtml(metrics.pollError)}</div>`
+                    : '';
+
+                return `
+                    <tr>
+                        <td>
+                            <div>${escapeHtml(instance.hostname)}</div>
+                            <div class="subtle mono">${escapeHtml(instance.id)}</div>
+                        </td>
+                        <td class="mono">${escapeHtml(instance.pid)}</td>
+                        <td>${reachabilityBadge(instance.reachability)}</td>
+                        <td>${probeBadge(healthUp, 'Not polled')}</td>
+                        <td>${probeBadge(readyUp, 'Not polled')}</td>
+                        <td>
+                            <div class="metric-stack">
+                                <span>Files: <span class="mono">${formatNumber(metrics && metrics.filesMonitored)}</span></span>
+                                <span>Events: <span class="mono">${formatNumber(metrics && metrics.eventsProcessed)}</span></span>
+                                <span>Bytes: <span class="mono">${formatBytes(metrics && metrics.bytesRead)}</span></span>
+                            </div>
+                            ${pollError}
+                        </td>
+                        <td class="mono">
+                            <div>H ${escapeHtml(instance.healthPort)}</div>
+                            <div>R ${escapeHtml(instance.readyPort)}</div>
+                            <div>M ${escapeHtml(instance.metricsPort)}</div>
+                        </td>
+                        <td>
+                            <div>${formatInstant(metrics && metrics.capturedAt)}</div>
+                            <div class="subtle">Last seen ${formatInstant(instance.lastSeenAt)}</div>
+                        </td>
+                        <td>
+                            <div>${formatInstant(instance.registeredAt)}</div>
+                            <div class="subtle">Started ${formatInstant(instance.startTime)}</div>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join('');
+    }
+
+    async function loadFleet() {
+        refreshBtn.disabled = true;
+        setRefreshState('warn', 'Refreshing...');
+        setError('');
+
+        try {
+            const response = await fetch('/api/instances');
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const instances = await response.json();
+            renderSummary(instances);
+            renderTable(instances);
+
+            const refreshedAt = new Date().toLocaleTimeString();
+            setRefreshState('ok', `Updated ${refreshedAt} · auto-refresh every 30s`);
+        } catch (error) {
+            setRefreshState('error', 'Refresh failed');
+            setError(error.message || 'Could not load fleet status');
+        } finally {
+            refreshBtn.disabled = false;
+        }
+    }
+
+    function scheduleRefresh() {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+        }
+        refreshTimer = setInterval(loadFleet, REFRESH_MS);
+    }
+
+    refreshBtn.addEventListener('click', loadFleet);
+    loadFleet();
+    scheduleRefresh();
+</script>
+</body>
+</html>

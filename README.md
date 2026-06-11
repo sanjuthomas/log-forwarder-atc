@@ -47,7 +47,7 @@ docker compose up -d
 ./mvnw spring-boot:run
 ```
 
-ATC listens on **8090** by default.
+ATC listens on **8090** by default. Open **http://localhost:8090/** for the fleet dashboard (auto-refreshes every 30 seconds from `GET /api/instances`).
 
 ### 3. Register an agent
 
@@ -90,6 +90,7 @@ Returns `204 No Content` on success, `404` if no matching instance exists.
 | GET | `/api/instances` | All registered agents with latest poll snapshot |
 | GET | `/api/instances/{id}` | Single agent status |
 | GET | `/api/instances/{id}/metrics?lookbackMinutes=60` | Time-series snapshots |
+| GET | `/` | Fleet dashboard (static UI) |
 
 ## Agent contract (expected by ATC)
 
