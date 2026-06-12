@@ -30,7 +30,7 @@ flowchart TB
     ATC --> DB
 ```
 
-Each agent is uniquely identified by **`hostname` + `process_id`**, so multiple forwarders on the same host are supported. Health, readiness, and metrics are exposed on a **single port**.
+Each live agent is uniquely identified by **`hostname` + `port`**, so multiple forwarders on the same host are supported when they listen on different ports. **`process_id`** is still sent on registration and validated on `/health` and `/ready` probes to confirm the process currently bound to that port. **Reachability** (`REACHABLE`, `UNREACHABLE`, `UNKNOWN`) is derived from polling and used for filtering—not as part of the registry key.
 
 ## Timeseries storage
 
@@ -81,7 +81,7 @@ The active card is highlighted with a blue border. **Deregistered** shows agents
 | Column | Description |
 |--------|-------------|
 | Host | Hostname and instance UUID |
-| Process ID | Process ID (unique per host) |
+| Process ID | Current OS process ID (validated on health/ready probes) |
 | Reachability | `REACHABLE`, `UNREACHABLE`, or `UNKNOWN` |
 | Health / Ready | Result of the latest `/health` and `/ready` probes |
 | Forwarder metrics | Tile grid: files watched, lines published/read, pipeline buffer, sink state |
@@ -113,7 +113,7 @@ Poll data appears after ATC’s first scheduled poll (default **every 30 seconds
 |-------|------|-------------|
 | `hostname` | string | Host where the agent runs |
 | `port` | integer | Single HTTP port for `/health`, `/ready`, and `/metrics` (1–65535) |
-| `process_id` | integer | OS process ID; unique per host |
+| `process_id` | integer | Current OS process ID; validated on health/ready probes |
 | `timestamp` | string (ISO-8601) | Agent start time (UTC), e.g. `2026-06-11T14:30:00Z` |
 
 ```bash
@@ -127,7 +127,7 @@ curl -X PUT http://localhost:8090/api/instances \
   }'
 ```
 
-Returns **`201 Created`** for a new agent or **`200 OK`** when re-registering the same `hostname` + `process_id` (updates `port` and `timestamp`). ATC immediately probes `/health`, `/ready`, and `/metrics` for the agent and broadcasts a dashboard update over SSE.
+Returns **`201 Created`** for a new agent or **`200 OK`** when re-registering the same `hostname` + `port` (updates `process_id` and `timestamp` after a restart). ATC immediately probes `/health`, `/ready`, and `/metrics` for the agent and broadcasts a dashboard update over SSE.
 
 **Example response** (`201 Created`):
 
@@ -144,18 +144,20 @@ Returns **`201 Created`** for a new agent or **`200 OK`** when re-registering th
 }
 ```
 
-Re-registration with the same `hostname` + `process_id` updates port and timestamp (agent restart) and returns `"created": false`.
+Re-registration with the same `hostname` + `port` updates `process_id` and `timestamp` (typical agent restart) and returns `"created": false`.
 
 ### Deregister an agent
 
-Call on graceful shutdown so ATC stops polling and removes the instance (metric history is deleted via cascade):
+Call on graceful shutdown so ATC stops polling and removes the instance (metric history is deleted via cascade). Lookup uses **`hostname` + `port`** only; `process_id` and `timestamp` are accepted for agent compatibility but ignored.
 
 ```bash
 curl -X DELETE http://localhost:8090/api/instances \
   -H 'Content-Type: application/json' \
   -d '{
     "hostname": "app-server-01",
-    "process_id": 12345
+    "port": 8080,
+    "process_id": 12345,
+    "timestamp": "2026-06-11T15:00:00.123456789Z"
   }'
 ```
 
@@ -166,7 +168,7 @@ Returns `204 No Content` on success, `404` if no matching instance exists. ATC r
 | Method | Path | Description |
 |--------|------|-------------|
 | PUT | `/api/instances` | Register or update an agent |
-| DELETE | `/api/instances` | Deregister an agent (`hostname` + `process_id`) |
+| DELETE | `/api/instances` | Deregister an agent (`hostname` + `port`; extra fields ignored) |
 | GET | `/api/instances` | All registered agents with latest poll snapshot |
 | GET | `/api/instances/{id}` | Single agent status |
 | GET | `/api/instances/stats` | Fleet counters (`deregistered_total`) |

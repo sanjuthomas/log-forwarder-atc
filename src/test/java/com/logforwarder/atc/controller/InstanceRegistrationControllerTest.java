@@ -105,7 +105,9 @@ class InstanceRegistrationControllerTest {
                         .content("""
                                 {
                                   "hostname": "host-1",
-                                  "process_id": 999
+                                  "port": 8080,
+                                  "process_id": 999,
+                                  "timestamp": "2026-06-11T16:00:00Z"
                                 }
                                 """))
                 .andExpect(status().isNoContent());
@@ -113,6 +115,23 @@ class InstanceRegistrationControllerTest {
         verify(fleetEventBroadcaster).broadcast(
                 FleetChangeEvent.deregistered(new DeregisteredInstance(id, "host-1", 999))
         );
+    }
+
+    @Test
+    void deregisterAcceptsMinimalHostnameAndPortPayload() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(registrationService.deregister(any(DeregistrationRequest.class)))
+                .thenReturn(new DeregisteredInstance(id, "host-1", 8080));
+
+        mockMvc.perform(delete("/api/instances")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostname": "host-1",
+                                  "port": 8080
+                                }
+                                """))
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -126,7 +145,9 @@ class InstanceRegistrationControllerTest {
                         .content("""
                                 {
                                   "hostname": "missing-host",
-                                  "process_id": 1
+                                  "port": 8080,
+                                  "process_id": 1,
+                                  "timestamp": "2026-06-11T16:00:00Z"
                                 }
                                 """))
                 .andExpect(status().isNotFound());

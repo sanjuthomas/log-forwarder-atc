@@ -18,8 +18,8 @@ import java.util.UUID;
 @Table(
         name = "log_forwarder_instance",
         uniqueConstraints = @UniqueConstraint(
-                name = "uq_instance_hostname_process_id",
-                columnNames = {"hostname", "process_id"}
+                name = "uq_instance_hostname_port",
+                columnNames = {"hostname", "port"}
         )
 )
 public class LogForwarderInstance {

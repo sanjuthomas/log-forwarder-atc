@@ -745,7 +745,7 @@
             .slice()
             .sort((a, b) => {
                 const host = a.hostname.localeCompare(b.hostname);
-                return host !== 0 ? host : a.process_id - b.process_id;
+                return host !== 0 ? host : a.port - b.port;
             })
             .map(instance => {
                 const metrics = instance.latest_metrics;
@@ -797,7 +797,7 @@
             .slice()
             .sort((a, b) => {
                 const host = a.hostname.localeCompare(b.hostname);
-                return host !== 0 ? host : a.process_id - b.process_id;
+                return host !== 0 ? host : a.port - b.port;
             })
             .map(record => `
                 <tr>
