@@ -34,8 +34,11 @@ class DashboardStaticResourceTest {
             assertThat(html).contains("openMetricsHelp");
             assertThat(html).contains("log_forwarder_files_watched");
             assertThat(html).contains("log_forwarder_lines_read_total");
+            assertThat(html).contains("log_forwarder_lines_replayed_total");
             assertThat(html).contains("log_forwarder_lines_published_total");
             assertThat(html).contains("lines_read");
+            assertThat(html).contains("lines_replayed");
+            assertThat(html).contains("sumMetrics");
             assertThat(html).contains("lines_published");
             assertThat(html).contains("pipeline_buffer_depth");
             assertThat(html).contains("publish_hibernating");
