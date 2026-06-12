@@ -777,13 +777,6 @@
         return `${amount.toFixed(digits)} ${units[unitIndex]}`;
     }
 
-    function totalLinesIngested(metrics) {
-        if (metrics.lines_read == null && metrics.lines_replayed == null) {
-            return null;
-        }
-        return (metrics.lines_read ?? 0) + (metrics.lines_replayed ?? 0);
-    }
-
     function reachabilityBadge(reachability) {
         switch (reachability) {
             case 'REACHABLE':
@@ -823,13 +816,13 @@
         },
         {
             tile: 'Published',
-            metric: 'log_forwarder_lines_published',
+            metric: 'log_forwarder_lines_published_total',
             description: 'Total number of log lines published to the configured sink.'
         },
         {
             tile: 'Read',
-            metric: 'log_forwarder_lines_read + log_forwarder_lines_replayed',
-            description: 'Total lines ingested from watched files. Newly appended lines after tail open count as lines_read. Lines re-read after restart because the on-disk watermark lagged behind published data count as lines_replayed.'
+            metric: 'log_forwarder_lines_read_total',
+            description: 'Total number of log lines read from watched files.'
         },
         {
             tile: 'CPU',
@@ -853,7 +846,7 @@
         }
     ];
 
-    const METRICS_HELP_NOTE = 'lines_read + lines_replayed ≈ lines_published + lines_filtered + lines_skipped + pipeline_buffer_dropped + (lines waiting in the publish batch). Replayed lines may be published again for at-least-once delivery.';
+    const METRICS_HELP_NOTE = 'Published and Read are direct Prometheus counters from the forwarder agent.';
 
     const metricsHelpModal = document.getElementById('metricsHelpModal');
     const metricsHelpList = document.getElementById('metricsHelpList');
@@ -870,7 +863,7 @@
                 </div>
             </div>
         `).join('');
-        metricsHelpNote.innerHTML = `<strong>Line accounting:</strong> ${escapeHtml(METRICS_HELP_NOTE)}`;
+        metricsHelpNote.innerHTML = `<strong>Read vs published:</strong> ${escapeHtml(METRICS_HELP_NOTE)}`;
         metricsHelpNote.classList.remove('hidden');
     }
 
@@ -899,7 +892,6 @@
 
         const bufferDepth = metrics.pipeline_buffer_depth;
         const bufferClass = bufferDepth != null && bufferDepth > 0 ? 'metric-meta-item warn' : 'metric-meta-item';
-        const totalRead = totalLinesIngested(metrics);
 
         return `
             <div class="metric-panel">
@@ -914,7 +906,7 @@
                     </div>
                     <div class="metric-tile">
                         <span class="metric-label">Read</span>
-                        <span class="metric-value">${formatNumber(totalRead)}</span>
+                        <span class="metric-value">${formatNumber(metrics.lines_read)}</span>
                     </div>
                     <div class="metric-tile">
                         <span class="metric-label">CPU</span>
