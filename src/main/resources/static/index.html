@@ -112,6 +112,26 @@
         .summary-card.success .value { color: var(--success); }
         .summary-card.danger .value { color: var(--danger); }
         .summary-card.warning .value { color: var(--warning); }
+        .summary-card.muted .value { color: var(--muted); }
+
+        .summary-card.filterable {
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .summary-card.filterable:hover {
+            border-color: var(--muted);
+        }
+
+        .summary-card.filterable.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .summary-card.filterable:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
 
         .card {
             background: var(--surface);
@@ -409,38 +429,42 @@
     <div id="errorBanner" class="alert hidden"></div>
 
     <section class="summary-grid" aria-label="Fleet summary">
-        <div class="summary-card">
+        <div id="filterAll" class="summary-card filterable active" role="button" tabindex="0" data-filter="all" aria-pressed="true">
             <div class="label">Registered</div>
             <div id="summaryTotal" class="value">—</div>
         </div>
-        <div class="summary-card success">
+        <div id="filterReachable" class="summary-card success filterable" role="button" tabindex="0" data-filter="REACHABLE" aria-pressed="false">
             <div class="label">Reachable</div>
             <div id="summaryReachable" class="value">—</div>
         </div>
-        <div class="summary-card danger">
+        <div id="filterUnreachable" class="summary-card danger filterable" role="button" tabindex="0" data-filter="UNREACHABLE" aria-pressed="false">
             <div class="label">Unreachable</div>
             <div id="summaryUnreachable" class="value">—</div>
         </div>
-        <div class="summary-card warning">
+        <div id="filterUnknown" class="summary-card warning filterable" role="button" tabindex="0" data-filter="UNKNOWN" aria-pressed="false">
             <div class="label">Unknown</div>
             <div id="summaryUnknown" class="value">—</div>
+        </div>
+        <div id="filterDeregistered" class="summary-card muted filterable" role="button" tabindex="0" data-filter="deregistered" aria-pressed="false">
+            <div class="label">Deregistered</div>
+            <div id="summaryDeregistered" class="value">—</div>
         </div>
     </section>
 
     <section class="card">
         <div class="card-header">
-            <h2>Registered agents</h2>
+            <h2 id="tableTitle">Registered agents</h2>
             <button id="refreshBtn" type="button" class="btn-secondary">Refresh now</button>
         </div>
 
         <div id="emptyState" class="empty-state hidden">
-            <strong>No agents registered yet</strong>
-            Agents call <span class="mono">PUT /api/instances</span> on startup. This page refreshes automatically every 30 seconds.
+            <strong id="emptyTitle">No agents registered yet</strong>
+            <span id="emptyMessage">Agents call <span class="mono">PUT /api/instances</span> on startup. This page refreshes automatically every 30 seconds.</span>
         </div>
 
         <div id="tableWrap" class="table-wrap hidden">
             <table>
-                <thead>
+                <thead id="tableHead">
                 <tr>
                     <th>Host</th>
                     <th>Process ID</th>
@@ -469,16 +493,58 @@
     const errorBanner = document.getElementById('errorBanner');
     const refreshBtn = document.getElementById('refreshBtn');
     const emptyState = document.getElementById('emptyState');
+    const emptyTitle = document.getElementById('emptyTitle');
+    const emptyMessage = document.getElementById('emptyMessage');
     const tableWrap = document.getElementById('tableWrap');
+    const tableTitle = document.getElementById('tableTitle');
+    const tableHead = document.getElementById('tableHead');
     const instanceRows = document.getElementById('instanceRows');
     const summaryTotal = document.getElementById('summaryTotal');
     const summaryReachable = document.getElementById('summaryReachable');
     const summaryUnreachable = document.getElementById('summaryUnreachable');
     const summaryUnknown = document.getElementById('summaryUnknown');
+    const summaryDeregistered = document.getElementById('summaryDeregistered');
+    const filterCards = document.querySelectorAll('.summary-card.filterable');
 
     let refreshTimer = null;
     let fleetEventSource = null;
     let fleetEventReconnectTimer = null;
+    let activeFilter = 'all';
+    let cachedInstances = [];
+    let cachedDeregistered = [];
+    let cachedDeregisteredTotal = 0;
+
+    const AGENT_TABLE_HEAD = `
+        <tr>
+            <th>Host</th>
+            <th>Process ID</th>
+            <th>Reachability</th>
+            <th>Health</th>
+            <th>Ready</th>
+            <th>Forwarder metrics</th>
+            <th>Port</th>
+            <th>Last poll</th>
+            <th>Registered</th>
+        </tr>
+    `;
+
+    const DEREGISTERED_TABLE_HEAD = `
+        <tr>
+            <th>Host</th>
+            <th>Process ID</th>
+            <th>Port</th>
+            <th>Registered</th>
+            <th>Deregistered</th>
+        </tr>
+    `;
+
+    const FILTER_LABELS = {
+        all: 'Registered agents',
+        REACHABLE: 'Reachable agents',
+        UNREACHABLE: 'Unreachable agents',
+        UNKNOWN: 'Unknown agents',
+        deregistered: 'Deregistered agents'
+    };
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -586,7 +652,7 @@
         errorBanner.classList.remove('hidden');
     }
 
-    function renderSummary(instances) {
+    function renderSummary(instances, deregisteredTotal) {
         const counts = { REACHABLE: 0, UNREACHABLE: 0, UNKNOWN: 0 };
         instances.forEach(instance => {
             const key = instance.reachability || 'UNKNOWN';
@@ -597,13 +663,78 @@
         summaryReachable.textContent = String(counts.REACHABLE || 0);
         summaryUnreachable.textContent = String(counts.UNREACHABLE || 0);
         summaryUnknown.textContent = String(counts.UNKNOWN || 0);
+        summaryDeregistered.textContent = formatNumber(deregisteredTotal);
     }
 
-    function renderTable(instances) {
+    function updateFilterCards() {
+        filterCards.forEach(card => {
+            const isActive = card.dataset.filter === activeFilter;
+            card.classList.toggle('active', isActive);
+            card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+
+    function setActiveFilter(filter) {
+        if (activeFilter === filter) {
+            return;
+        }
+        activeFilter = filter;
+        updateFilterCards();
+        applyActiveView();
+    }
+
+    function filterInstances(instances) {
+        if (activeFilter === 'all' || activeFilter === 'deregistered') {
+            return instances;
+        }
+        return instances.filter(instance => (instance.reachability || 'UNKNOWN') === activeFilter);
+    }
+
+    function emptyStateCopy() {
+        switch (activeFilter) {
+            case 'REACHABLE':
+                return {
+                    title: 'No reachable agents',
+                    message: 'No registered agents are currently reachable.'
+                };
+            case 'UNREACHABLE':
+                return {
+                    title: 'No unreachable agents',
+                    message: 'All registered agents responded to at least one probe on the last poll.'
+                };
+            case 'UNKNOWN':
+                return {
+                    title: 'No unknown agents',
+                    message: 'Every registered agent has a known reachability status.'
+                };
+            case 'deregistered':
+                return {
+                    title: 'No deregistered agents yet',
+                    message: 'Agents removed with DELETE /api/instances will appear here.'
+                };
+            default:
+                return {
+                    title: 'No agents registered yet',
+                    message: 'Agents call PUT /api/instances on startup. This page refreshes automatically every 30 seconds.'
+                };
+        }
+    }
+
+    function showEmptyState() {
+        const copy = emptyStateCopy();
+        emptyTitle.textContent = copy.title;
+        emptyMessage.innerHTML = copy.message;
+        tableWrap.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        instanceRows.innerHTML = '';
+    }
+
+    function renderAgentTable(instances) {
+        tableTitle.textContent = FILTER_LABELS[activeFilter] || FILTER_LABELS.all;
+        tableHead.innerHTML = AGENT_TABLE_HEAD;
+
         if (!instances.length) {
-            tableWrap.classList.add('hidden');
-            emptyState.classList.remove('hidden');
-            instanceRows.innerHTML = '';
+            showEmptyState();
             return;
         }
 
@@ -650,20 +781,81 @@
             .join('');
     }
 
+    function renderDeregisteredTable(records) {
+        tableTitle.textContent = FILTER_LABELS.deregistered;
+        tableHead.innerHTML = DEREGISTERED_TABLE_HEAD;
+
+        if (!records.length) {
+            showEmptyState();
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        tableWrap.classList.remove('hidden');
+
+        instanceRows.innerHTML = records
+            .slice()
+            .sort((a, b) => {
+                const host = a.hostname.localeCompare(b.hostname);
+                return host !== 0 ? host : a.process_id - b.process_id;
+            })
+            .map(record => `
+                <tr>
+                    <td>
+                        <div>${escapeHtml(record.hostname)}</div>
+                        <div class="subtle mono">${escapeHtml(record.instance_id)}</div>
+                    </td>
+                    <td class="mono">${escapeHtml(record.process_id)}</td>
+                    <td class="mono">${escapeHtml(record.port)}</td>
+                    <td>${formatInstant(record.registered_at)}</td>
+                    <td>${formatInstant(record.deregistered_at)}</td>
+                </tr>
+            `)
+            .join('');
+    }
+
+    async function applyActiveView() {
+        if (activeFilter === 'deregistered') {
+            try {
+                const response = await fetch('/api/instances/deregistered');
+                if (!response.ok) {
+                    throw new Error(`Deregistered list returned ${response.status}`);
+                }
+                cachedDeregistered = await response.json();
+                renderDeregisteredTable(cachedDeregistered);
+            } catch (error) {
+                setError(error.message || 'Could not load deregistered agents');
+                showEmptyState();
+            }
+            return;
+        }
+
+        renderAgentTable(filterInstances(cachedInstances));
+    }
+
     async function loadFleet() {
         refreshBtn.disabled = true;
         setRefreshState('warn', 'Refreshing...');
         setError('');
 
         try {
-            const response = await fetch('/api/instances');
-            if (!response.ok) {
-                throw new Error(`Server returned ${response.status}`);
+            const [instancesResponse, statsResponse] = await Promise.all([
+                fetch('/api/instances'),
+                fetch('/api/instances/stats')
+            ]);
+            if (!instancesResponse.ok) {
+                throw new Error(`Server returned ${instancesResponse.status}`);
+            }
+            if (!statsResponse.ok) {
+                throw new Error(`Stats request returned ${statsResponse.status}`);
             }
 
-            const instances = await response.json();
-            renderSummary(instances);
-            renderTable(instances);
+            const instances = await instancesResponse.json();
+            const stats = await statsResponse.json();
+            cachedInstances = instances;
+            cachedDeregisteredTotal = stats.deregistered_total;
+            renderSummary(instances, stats.deregistered_total);
+            await applyActiveView();
 
             const intervalMs = scheduleRefresh(instances);
             const refreshedAt = new Date().toLocaleTimeString();
@@ -714,6 +906,16 @@
             fleetEventReconnectTimer = setTimeout(connectFleetEvents, EVENT_RECONNECT_MS);
         };
     }
+
+    filterCards.forEach(card => {
+        card.addEventListener('click', () => setActiveFilter(card.dataset.filter));
+        card.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setActiveFilter(card.dataset.filter);
+            }
+        });
+    });
 
     refreshBtn.addEventListener('click', loadFleet);
     loadFleet();

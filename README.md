@@ -64,6 +64,7 @@ The dashboard is a static page served from `src/main/resources/static/index.html
 | Reachable | Agents ATC could reach on the last poll |
 | Unreachable | Agents that failed all probes |
 | Unknown | Newly registered agents not polled yet |
+| Deregistered | Total agents deregistered since ATC started (cumulative) |
 
 **Agent table** columns:
 
@@ -156,6 +157,7 @@ Returns `204 No Content` on success, `404` if no matching instance exists. A **d
 | DELETE | `/api/instances` | Deregister an agent (`hostname` + `process_id`) |
 | GET | `/api/instances` | All registered agents with latest poll snapshot |
 | GET | `/api/instances/{id}` | Single agent status |
+| GET | `/api/instances/stats` | Fleet counters (`deregistered_total`) |
 | GET | `/api/instances/events` | SSE stream of registration/deregistration events (`fleet-change`) |
 | GET | `/api/instances/{id}/metrics?lookbackMinutes=60` | Time-series snapshots |
 | GET | `/` | Fleet dashboard UI |
