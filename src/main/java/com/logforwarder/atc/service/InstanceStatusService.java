@@ -81,8 +81,11 @@ public class InstanceStatusService {
                 snapshot.getFilesWatched(),
                 snapshot.getLinesPublished(),
                 snapshot.getLinesRead(),
+                snapshot.getLinesReplayed(),
                 snapshot.getPipelineBufferDepth(),
                 snapshot.getPublishHibernating(),
+                snapshot.getProcessCpuUtilization(),
+                snapshot.getProcessMemoryUsage(),
                 snapshot.getPollError()
         );
     }
@@ -96,8 +99,11 @@ public class InstanceStatusService {
                 snapshot.getFilesWatched(),
                 snapshot.getLinesPublished(),
                 snapshot.getLinesRead(),
+                snapshot.getLinesReplayed(),
                 snapshot.getPipelineBufferDepth(),
                 snapshot.getPublishHibernating(),
+                snapshot.getProcessCpuUtilization(),
+                snapshot.getProcessMemoryUsage(),
                 snapshot.getPollError()
         );
     }

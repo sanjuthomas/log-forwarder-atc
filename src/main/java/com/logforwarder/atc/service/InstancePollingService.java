@@ -75,8 +75,11 @@ public class InstancePollingService {
                 metrics != null ? metrics.filesWatched() : null,
                 metrics != null ? metrics.linesPublished() : null,
                 metrics != null ? metrics.linesRead() : null,
+                metrics != null ? metrics.linesReplayed() : null,
                 metrics != null ? metrics.pipelineBufferDepth() : null,
                 metrics != null ? metrics.publishHibernating() : null,
+                metrics != null ? metrics.processCpuUtilization() : null,
+                metrics != null ? metrics.processMemoryUsage() : null,
                 result.error()
         );
         metricsRepository.save(snapshot);

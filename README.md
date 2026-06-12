@@ -101,7 +101,7 @@ Poll data appears after ATC’s first scheduled poll (default **every 30 seconds
 |-------------|---------------|-------|
 | Files | `log_forwarder_files_watched` | Log files currently tailed |
 | Published | `log_forwarder_lines_published_total` | Lines sent to the sink |
-| Read | `log_forwarder_lines_read_total` | Lines read from watched files |
+| Read | `log_forwarder_lines_read_total` + `log_forwarder_lines_replayed_total` | Total lines ingested (new tail + restart replays) |
 | Buffer | `log_forwarder_pipeline_buffer_depth` | Highlighted when backlog &gt; 0 |
 | Sink | `log_forwarder_publish_hibernating` | OK or Hibernating badge |
 
@@ -207,9 +207,12 @@ The JSON returned by `GET /api/instances` powers the dashboard. Each entry inclu
     "ready_up": true,
     "files_watched": 1,
     "lines_published": 68,
-    "lines_read": 69,
+    "lines_read": 56,
+    "lines_replayed": 13,
     "pipeline_buffer_depth": 0,
     "publish_hibernating": false,
+    "process_cpu_utilization": 1.3,
+    "process_memory_usage": 52428800,
     "poll_error": null
   }
 }
@@ -269,15 +272,18 @@ Expected ready JSON:
 
 The `process_id` in each probe response must match the value registered via `PUT /api/instances`. A mismatch marks that probe as down and is recorded in `poll_error`.
 
-Expected metrics excerpt (OpenMetrics text). ATC parses these five series for the dashboard:
+Expected metrics excerpt (OpenMetrics text). ATC parses these series for the dashboard:
 
 | Prometheus metric | Dashboard field |
 |-------------------|-----------------|
 | `log_forwarder_files_watched` | Files watched |
 | `log_forwarder_lines_published_total` | Lines published |
-| `log_forwarder_lines_read_total` | Lines read |
+| `log_forwarder_lines_read_total` | Newly appended lines read |
+| `log_forwarder_lines_replayed_total` | Lines re-read after restart (stale watermark) |
 | `log_forwarder_pipeline_buffer_depth` | Pipeline buffer depth |
 | `log_forwarder_publish_hibernating` | Sink hibernating (`1` = failing) |
+| `process_cpu_utilization_ratio` | Process CPU (% of one core; `1.3` = 1.3%) |
+| `process_memory_usage_bytes` | Process memory (bytes) |
 
 Example:
 
@@ -287,6 +293,8 @@ log_forwarder_lines_published_total 68
 log_forwarder_lines_read_total 69
 log_forwarder_pipeline_buffer_depth 0
 log_forwarder_publish_hibernating 0
+process_cpu_utilization_ratio 1.3
+process_memory_usage_bytes 52428800
 ```
 
 Paths are configurable via `atc.agent.*` in `application.yml`.

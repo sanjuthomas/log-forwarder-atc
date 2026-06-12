@@ -48,7 +48,7 @@ class LogForwarderAgentClientTest {
         var health = LogForwarderAgentClient.ProbeOutcome.failure("Health probe process_id mismatch: expected 12345, got 999");
         var ready = LogForwarderAgentClient.ProbeOutcome.ok();
 
-        String error = LogForwarderAgentClient.buildPollError(health, ready, new AgentMetricsResponse(1L, 2L, 3L, 0L, false));
+        String error = LogForwarderAgentClient.buildPollError(health, ready, new AgentMetricsResponse(1L, 2L, 3L, 0L, 0L, false, null, null));
 
         assertEquals("Health probe process_id mismatch: expected 12345, got 999", error);
     }
@@ -58,7 +58,7 @@ class LogForwarderAgentClientTest {
         String error = LogForwarderAgentClient.buildPollError(
                 LogForwarderAgentClient.ProbeOutcome.ok(),
                 LogForwarderAgentClient.ProbeOutcome.ok(),
-                new AgentMetricsResponse(1L, 2L, 3L, 0L, false)
+                new AgentMetricsResponse(1L, 2L, 3L, 0L, 0L, false, null, null)
         );
 
         assertNull(error);

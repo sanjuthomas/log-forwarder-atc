@@ -309,6 +309,174 @@
             min-width: 220px;
         }
 
+        .th-with-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+        }
+
+        .metric-info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.125rem;
+            height: 1.125rem;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.25);
+            color: var(--muted);
+            cursor: pointer;
+            vertical-align: middle;
+            transition: color 0.15s, border-color 0.15s, background 0.15s;
+        }
+
+        .metric-info-btn:hover {
+            color: var(--text);
+            border-color: var(--muted);
+            background: rgba(59, 130, 246, 0.12);
+        }
+
+        .metric-info-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .metric-info-btn svg {
+            width: 0.75rem;
+            height: 0.75rem;
+            fill: currentColor;
+        }
+
+        .metrics-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .metrics-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.62);
+        }
+
+        .metrics-modal-content {
+            position: relative;
+            width: min(100%, 34rem);
+            max-height: min(85vh, 640px);
+            overflow: auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.35rem 1.35rem;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+        }
+
+        .metrics-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .metrics-modal-header h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .metrics-modal-close {
+            flex-shrink: 0;
+            width: 2rem;
+            height: 2rem;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--muted);
+            font-size: 1.25rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .metrics-modal-close:hover {
+            color: var(--text);
+            border-color: var(--muted);
+        }
+
+        .metrics-help-intro {
+            margin: 0 0 1rem;
+            color: var(--muted);
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .metrics-help-intro a {
+            color: #93c5fd;
+        }
+
+        .metrics-help-intro code {
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 0.8125rem;
+        }
+
+        .metrics-help-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .metrics-help-item + .metrics-help-item {
+            margin-top: 0.85rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .metrics-help-item dt,
+        .metrics-help-item .metrics-help-term {
+            margin: 0 0 0.2rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .metrics-help-item dd,
+        .metrics-help-item .metrics-help-desc {
+            margin: 0;
+            font-size: 0.8125rem;
+            line-height: 1.45;
+            color: var(--muted);
+        }
+
+        .metrics-help-metric {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 0.75rem;
+            color: #93c5fd;
+        }
+
+        .metrics-help-note {
+            margin: 1rem 0 0;
+            padding: 0.75rem 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.18);
+            font-size: 0.8125rem;
+            line-height: 1.45;
+            color: var(--muted);
+        }
+
+        .metrics-help-note strong {
+            color: var(--text);
+        }
+
         .metric-panel-empty {
             color: var(--muted);
             font-size: 0.8125rem;
@@ -388,12 +556,6 @@
             font-weight: 600;
         }
 
-        .metric-footnote {
-            margin-top: 0.45rem;
-            font-size: 0.75rem;
-            color: var(--muted);
-        }
-
         .metric-error {
             margin-top: 0.45rem;
         }
@@ -471,7 +633,7 @@
                     <th>Reachability</th>
                     <th>Health</th>
                     <th>Ready</th>
-                    <th>Forwarder metrics</th>
+                    <th><span class="th-with-info">Forwarder metrics<button type="button" class="metric-info-btn" aria-label="About forwarder metrics" title="About forwarder metrics"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.25a6.75 6.75 0 1 0 0 13.5A6.75 6.75 0 0 0 8 1.25Zm-.75 4.5a.75.75 0 0 1 1.5 0v.25a.75.75 0 0 1-1.5 0v-.25Zm0 2.25a.75.75 0 0 1 1.5 0v3.25a.75.75 0 0 1-1.5 0V7.75Z"/></svg></button></span></th>
                     <th>Port</th>
                     <th>Last poll</th>
                     <th>Registered</th>
@@ -481,6 +643,22 @@
             </table>
         </div>
     </section>
+</div>
+
+<div id="metricsHelpModal" class="metrics-modal hidden" role="dialog" aria-modal="true" aria-labelledby="metricsHelpTitle" aria-hidden="true">
+    <div class="metrics-modal-backdrop" data-metrics-help-close></div>
+    <div class="metrics-modal-content">
+        <div class="metrics-modal-header">
+            <h3 id="metricsHelpTitle">Forwarder metrics</h3>
+            <button type="button" class="metrics-modal-close" aria-label="Close" data-metrics-help-close>&times;</button>
+        </div>
+        <p class="metrics-help-intro">
+            Values come from the agent <code>/metrics</code> endpoint. Descriptions follow the
+            <a href="https://github.com/sanjuthomas/log-forwarder/wiki/Monitoring#5-metrics-reference" target="_blank" rel="noopener noreferrer">log-forwarder monitoring reference</a>.
+        </p>
+        <div id="metricsHelpList" class="metrics-help-list"></div>
+        <p id="metricsHelpNote" class="metrics-help-note hidden"></p>
+    </div>
 </div>
 
 <script>
@@ -514,6 +692,16 @@
     let cachedDeregistered = [];
     let cachedDeregisteredTotal = 0;
 
+    const METRICS_INFO_ICON = `
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 1.25a6.75 6.75 0 1 0 0 13.5A6.75 6.75 0 0 0 8 1.25Zm-.75 4.5a.75.75 0 0 1 1.5 0v.25a.75.75 0 0 1-1.5 0v-.25Zm0 2.25a.75.75 0 0 1 1.5 0v3.25a.75.75 0 0 1-1.5 0V7.75Z"/>
+        </svg>
+    `;
+
+    function forwarderMetricsColumnHeader() {
+        return `<span class="th-with-info">Forwarder metrics<button type="button" class="metric-info-btn" aria-label="About forwarder metrics" title="About forwarder metrics">${METRICS_INFO_ICON}</button></span>`;
+    }
+
     const AGENT_TABLE_HEAD = `
         <tr>
             <th>Host</th>
@@ -521,7 +709,7 @@
             <th>Reachability</th>
             <th>Health</th>
             <th>Ready</th>
-            <th>Forwarder metrics</th>
+            <th>${forwarderMetricsColumnHeader()}</th>
             <th>Port</th>
             <th>Last poll</th>
             <th>Registered</th>
@@ -566,6 +754,36 @@
         return Number(value).toLocaleString();
     }
 
+    function formatPercent(value) {
+        if (value == null) {
+            return '—';
+        }
+        // Agent exports percent of one core (1.3 = 1.3%, 100 = one full core).
+        return `${Number(value).toFixed(1)}%`;
+    }
+
+    function formatBytes(value) {
+        if (value == null) {
+            return '—';
+        }
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let amount = Number(value);
+        let unitIndex = 0;
+        while (amount >= 1024 && unitIndex < units.length - 1) {
+            amount /= 1024;
+            unitIndex += 1;
+        }
+        const digits = amount >= 100 || unitIndex === 0 ? 0 : amount >= 10 ? 1 : 2;
+        return `${amount.toFixed(digits)} ${units[unitIndex]}`;
+    }
+
+    function totalLinesIngested(metrics) {
+        if (metrics.lines_read == null && metrics.lines_replayed == null) {
+            return null;
+        }
+        return (metrics.lines_read ?? 0) + (metrics.lines_replayed ?? 0);
+    }
+
     function reachabilityBadge(reachability) {
         switch (reachability) {
             case 'REACHABLE':
@@ -597,6 +815,83 @@
         return '<span class="badge badge-muted">Unknown</span>';
     }
 
+    const METRICS_HELP = [
+        {
+            tile: 'Files',
+            metric: 'log_forwarder_files_watched',
+            description: 'Number of log files currently being tailed.'
+        },
+        {
+            tile: 'Published',
+            metric: 'log_forwarder_lines_published',
+            description: 'Total number of log lines published to the configured sink.'
+        },
+        {
+            tile: 'Read',
+            metric: 'log_forwarder_lines_read + log_forwarder_lines_replayed',
+            description: 'Total lines ingested from watched files. Newly appended lines after tail open count as lines_read. Lines re-read after restart because the on-disk watermark lagged behind published data count as lines_replayed.'
+        },
+        {
+            tile: 'CPU',
+            metric: 'process_cpu_utilization',
+            description: 'CPU used as percent of one core (1.3 = 1.3%; 100 = one core fully busy; can exceed 100 on multi-core hosts). Same basis as top and psutil. Averaged since the previous scrape; the first scrape is 0.'
+        },
+        {
+            tile: 'Memory',
+            metric: 'process_memory_usage',
+            description: 'Amount of physical memory (RSS) used by the forwarder process, in bytes.'
+        },
+        {
+            tile: 'Buffer',
+            metric: 'log_forwarder_pipeline_buffer_depth',
+            description: 'Current number of line events buffered between the watcher and pipeline. Highlighted when backlog is greater than zero.'
+        },
+        {
+            tile: 'Sink',
+            metric: 'log_forwarder_publish_hibernating',
+            description: 'Whether the forwarder is in sink hibernate mode after a failed publish batch. A value of 1 means hibernating; 0 means OK.'
+        }
+    ];
+
+    const METRICS_HELP_NOTE = 'lines_read + lines_replayed ≈ lines_published + lines_filtered + lines_skipped + pipeline_buffer_dropped + (lines waiting in the publish batch). Replayed lines may be published again for at-least-once delivery.';
+
+    const metricsHelpModal = document.getElementById('metricsHelpModal');
+    const metricsHelpList = document.getElementById('metricsHelpList');
+    const metricsHelpNote = document.getElementById('metricsHelpNote');
+    let metricsHelpTrigger = null;
+
+    function renderMetricsHelpList() {
+        metricsHelpList.innerHTML = METRICS_HELP.map(item => `
+            <div class="metrics-help-item">
+                <div class="metrics-help-term">${escapeHtml(item.tile)}</div>
+                <div class="metrics-help-desc">
+                    <code class="metrics-help-metric">${escapeHtml(item.metric)}</code>
+                    ${escapeHtml(item.description)}
+                </div>
+            </div>
+        `).join('');
+        metricsHelpNote.innerHTML = `<strong>Line accounting:</strong> ${escapeHtml(METRICS_HELP_NOTE)}`;
+        metricsHelpNote.classList.remove('hidden');
+    }
+
+    function openMetricsHelp(trigger) {
+        metricsHelpTrigger = trigger || null;
+        metricsHelpModal.classList.remove('hidden');
+        metricsHelpModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        metricsHelpModal.querySelector('.metrics-modal-close').focus();
+    }
+
+    function closeMetricsHelp() {
+        metricsHelpModal.classList.add('hidden');
+        metricsHelpModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        if (metricsHelpTrigger) {
+            metricsHelpTrigger.focus();
+            metricsHelpTrigger = null;
+        }
+    }
+
     function renderMetricsPanel(metrics, pollErrorHtml) {
         if (!metrics) {
             return '<div class="metric-panel metric-panel-empty">Not polled yet</div>';
@@ -604,12 +899,7 @@
 
         const bufferDepth = metrics.pipeline_buffer_depth;
         const bufferClass = bufferDepth != null && bufferDepth > 0 ? 'metric-meta-item warn' : 'metric-meta-item';
-        const pending = metrics.lines_read != null && metrics.lines_published != null
-            ? Math.max(0, metrics.lines_read - metrics.lines_published)
-            : null;
-        const footnote = pending != null && pending > 0
-            ? `${formatNumber(pending)} line${pending === 1 ? '' : 's'} read but not yet published`
-            : '';
+        const totalRead = totalLinesIngested(metrics);
 
         return `
             <div class="metric-panel">
@@ -624,14 +914,21 @@
                     </div>
                     <div class="metric-tile">
                         <span class="metric-label">Read</span>
-                        <span class="metric-value">${formatNumber(metrics.lines_read)}</span>
+                        <span class="metric-value">${formatNumber(totalRead)}</span>
+                    </div>
+                    <div class="metric-tile">
+                        <span class="metric-label">CPU</span>
+                        <span class="metric-value">${formatPercent(metrics.process_cpu_utilization)}</span>
+                    </div>
+                    <div class="metric-tile">
+                        <span class="metric-label">Memory</span>
+                        <span class="metric-value">${formatBytes(metrics.process_memory_usage)}</span>
                     </div>
                 </div>
                 <div class="metric-meta">
                     <span class="${bufferClass}">Buffer <strong>${formatNumber(bufferDepth)}</strong></span>
                     <span class="metric-meta-item">Sink ${sinkBadge(metrics.publish_hibernating)}</span>
                 </div>
-                ${footnote ? `<div class="metric-footnote">${escapeHtml(footnote)}</div>` : ''}
                 ${pollErrorHtml ? `<div class="metric-error subtle">${pollErrorHtml}</div>` : ''}
             </div>
         `;
@@ -918,6 +1215,26 @@
     });
 
     refreshBtn.addEventListener('click', loadFleet);
+    renderMetricsHelpList();
+
+    document.addEventListener('click', event => {
+        const infoBtn = event.target.closest('.metric-info-btn');
+        if (infoBtn) {
+            event.preventDefault();
+            openMetricsHelp(infoBtn);
+            return;
+        }
+        if (event.target.closest('[data-metrics-help-close]')) {
+            closeMetricsHelp();
+        }
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !metricsHelpModal.classList.contains('hidden')) {
+            closeMetricsHelp();
+        }
+    });
+
     loadFleet();
     connectFleetEvents();
 </script>

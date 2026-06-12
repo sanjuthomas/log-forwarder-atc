@@ -1,0 +1,2 @@
+ALTER TABLE instance_metrics_snapshot ADD COLUMN process_cpu_utilization DOUBLE PRECISION;
+ALTER TABLE instance_metrics_snapshot ADD COLUMN process_memory_usage BIGINT;
