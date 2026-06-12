@@ -47,7 +47,7 @@ class InstanceRegistrationServiceTest {
                 12345,
                 Instant.parse("2026-06-11T14:30:00Z")
         );
-        when(instanceRepository.findByHostnameAndProcessId("app-server-01", 12345)).thenReturn(Optional.empty());
+        when(instanceRepository.findByHostnameAndPort("app-server-01", 8080)).thenReturn(Optional.empty());
         when(instanceRepository.save(any(LogForwarderInstance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = registrationService.register(request);
@@ -69,10 +69,10 @@ class InstanceRegistrationServiceTest {
                 8080,
                 Instant.parse("2026-06-11T14:30:05Z")
         );
-        when(instanceRepository.findByHostnameAndProcessId("app-server-01", 12345)).thenReturn(Optional.of(instance));
+        when(instanceRepository.findByHostnameAndPort("app-server-01", 8080)).thenReturn(Optional.of(instance));
 
         DeregisteredInstance removed = registrationService.deregister(
-                new DeregistrationRequest("app-server-01", 12345)
+                new DeregistrationRequest("app-server-01", 8080)
         );
 
         assertThat(removed.hostname()).isEqualTo("app-server-01");
@@ -84,38 +84,39 @@ class InstanceRegistrationServiceTest {
 
     @Test
     void deregisterThrowsWhenInstanceMissing() {
-        when(instanceRepository.findByHostnameAndProcessId("missing", 1)).thenReturn(Optional.empty());
+        when(instanceRepository.findByHostnameAndPort("missing", 8080)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> registrationService.deregister(new DeregistrationRequest("missing", 1)))
+        assertThatThrownBy(() -> registrationService.deregister(new DeregistrationRequest("missing", 8080)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
-    void registerUpdatesExistingInstance() {
+    void registerUpdatesExistingInstanceOnRestart() {
         LogForwarderInstance existing = LogForwarderInstance.create(
                 "app-server-01",
                 12345,
                 Instant.parse("2026-06-11T14:00:00Z"),
-                8081,
+                8080,
                 Instant.parse("2026-06-11T14:00:05Z")
         );
-        when(instanceRepository.findByHostnameAndProcessId("app-server-01", 12345)).thenReturn(Optional.of(existing));
+        when(instanceRepository.findByHostnameAndPort("app-server-01", 8080)).thenReturn(Optional.of(existing));
         when(instanceRepository.save(existing)).thenReturn(existing);
 
         var response = registrationService.register(new RegistrationRequest(
                 "app-server-01",
                 8080,
-                12345,
+                67890,
                 Instant.parse("2026-06-11T14:30:00Z")
         ));
 
         assertThat(response.created()).isFalse();
         assertThat(response.port()).isEqualTo(8080);
+        assertThat(response.processId()).isEqualTo(67890);
         assertThat(response.timestamp()).isEqualTo(Instant.parse("2026-06-11T14:30:00Z"));
         assertThat(response.reachability()).isEqualTo(Reachability.UNKNOWN);
 
         ArgumentCaptor<LogForwarderInstance> captor = ArgumentCaptor.forClass(LogForwarderInstance.class);
         verify(instanceRepository).save(captor.capture());
-        assertThat(captor.getValue().getPort()).isEqualTo(8080);
+        assertThat(captor.getValue().getProcessId()).isEqualTo(67890);
     }
 }

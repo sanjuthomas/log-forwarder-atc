@@ -105,7 +105,7 @@ class InstanceRegistrationControllerTest {
                         .content("""
                                 {
                                   "hostname": "host-1",
-                                  "process_id": 999
+                                  "port": 8080
                                 }
                                 """))
                 .andExpect(status().isNoContent());
@@ -126,7 +126,7 @@ class InstanceRegistrationControllerTest {
                         .content("""
                                 {
                                   "hostname": "missing-host",
-                                  "process_id": 1
+                                  "port": 8080
                                 }
                                 """))
                 .andExpect(status().isNotFound());
