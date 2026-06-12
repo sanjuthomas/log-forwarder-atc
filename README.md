@@ -5,11 +5,19 @@ Air Traffic Controller for **log-forwarder** agents. Agents register on startup;
 ## Architecture
 
 ```mermaid
-flowchart LR
-    Agent1[log-forwarder on host A]
-    Agent2[log-forwarder on host A]
-    Agent3[log-forwarder on host B]
-    ATC[log-forwarder-atc]
+flowchart TB
+    subgraph top[" "]
+        direction LR
+        subgraph left[" "]
+            direction TB
+            Agent1[log-forwarder on host A]
+            Agent2[log-forwarder on host A]
+            Agent3[log-forwarder on host B]
+        end
+        ATC[log-forwarder-atc]
+        Dashboard[Fleet dashboard]
+    end
+
     DB[(PostgreSQL + TimescaleDB)]
 
     Agent1 -->|PUT register| ATC
@@ -18,7 +26,7 @@ flowchart LR
     ATC -->|poll /health /ready /metrics| Agent1
     ATC -->|poll /health /ready /metrics| Agent2
     ATC -->|poll /health /ready /metrics| Agent3
-    ATC -->|SSE fleet-change| Dashboard[Fleet dashboard]
+    ATC -->|SSE fleet-change| Dashboard
     ATC --> DB
 ```
 
