@@ -27,11 +27,19 @@ class DashboardStaticResourceTest {
             assertThat(html).contains("summaryDeregistered");
             assertThat(html).contains("/api/instances/stats");
             assertThat(html).contains("EventSource");
-            assertThat(html).contains("renderMetricsPanel");
-            assertThat(html).contains("files_watched");
+            assertThat(html).contains("th-with-info");
+            assertThat(html).contains("metric-info-btn");
+            assertThat(html).contains("Forwarder metrics");
+            assertThat(html).contains("metricsHelpModal");
+            assertThat(html).contains("openMetricsHelp");
+            assertThat(html).contains("log_forwarder_files_watched");
+            assertThat(html).contains("lines_replayed");
+            assertThat(html).contains("totalLinesIngested");
             assertThat(html).contains("lines_published");
             assertThat(html).contains("pipeline_buffer_depth");
             assertThat(html).contains("publish_hibernating");
+            assertThat(html).contains("process_cpu_utilization");
+            assertThat(html).contains("process_memory_usage");
         }
     }
 

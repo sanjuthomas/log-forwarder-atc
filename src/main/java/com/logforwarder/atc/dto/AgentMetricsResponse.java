@@ -4,7 +4,10 @@ public record AgentMetricsResponse(
         Long filesWatched,
         Long linesPublished,
         Long linesRead,
+        Long linesReplayed,
         Long pipelineBufferDepth,
-        Boolean publishHibernating
+        Boolean publishHibernating,
+        Double processCpuUtilization,
+        Long processMemoryUsage
 ) {
 }

@@ -39,11 +39,20 @@ public class InstanceMetricsSnapshot {
     @Column(name = "lines_read")
     private Long linesRead;
 
+    @Column(name = "lines_replayed")
+    private Long linesReplayed;
+
     @Column(name = "pipeline_buffer_depth")
     private Long pipelineBufferDepth;
 
     @Column(name = "publish_hibernating")
     private Boolean publishHibernating;
+
+    @Column(name = "process_cpu_utilization")
+    private Double processCpuUtilization;
+
+    @Column(name = "process_memory_usage")
+    private Long processMemoryUsage;
 
     @Column(name = "poll_error", length = 512)
     private String pollError;
@@ -59,8 +68,11 @@ public class InstanceMetricsSnapshot {
             Long filesWatched,
             Long linesPublished,
             Long linesRead,
+            Long linesReplayed,
             Long pipelineBufferDepth,
             Boolean publishHibernating,
+            Double processCpuUtilization,
+            Long processMemoryUsage,
             String pollError
     ) {
         InstanceMetricsSnapshot snapshot = new InstanceMetricsSnapshot();
@@ -71,8 +83,11 @@ public class InstanceMetricsSnapshot {
         snapshot.filesWatched = filesWatched;
         snapshot.linesPublished = linesPublished;
         snapshot.linesRead = linesRead;
+        snapshot.linesReplayed = linesReplayed;
         snapshot.pipelineBufferDepth = pipelineBufferDepth;
         snapshot.publishHibernating = publishHibernating;
+        snapshot.processCpuUtilization = processCpuUtilization;
+        snapshot.processMemoryUsage = processMemoryUsage;
         snapshot.pollError = pollError;
         return snapshot;
     }
@@ -105,12 +120,24 @@ public class InstanceMetricsSnapshot {
         return linesRead;
     }
 
+    public Long getLinesReplayed() {
+        return linesReplayed;
+    }
+
     public Long getPipelineBufferDepth() {
         return pipelineBufferDepth;
     }
 
     public Boolean getPublishHibernating() {
         return publishHibernating;
+    }
+
+    public Double getProcessCpuUtilization() {
+        return processCpuUtilization;
+    }
+
+    public Long getProcessMemoryUsage() {
+        return processMemoryUsage;
     }
 
     public String getPollError() {
