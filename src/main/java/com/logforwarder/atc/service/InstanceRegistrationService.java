@@ -19,9 +19,17 @@ import java.util.UUID;
 public class InstanceRegistrationService {
 
     private final LogForwarderInstanceRepository instanceRepository;
+    private final FleetStatsService fleetStatsService;
+    private final DeregisteredInstanceService deregisteredInstanceService;
 
-    public InstanceRegistrationService(LogForwarderInstanceRepository instanceRepository) {
+    public InstanceRegistrationService(
+            LogForwarderInstanceRepository instanceRepository,
+            FleetStatsService fleetStatsService,
+            DeregisteredInstanceService deregisteredInstanceService
+    ) {
         this.instanceRepository = instanceRepository;
+        this.fleetStatsService = fleetStatsService;
+        this.deregisteredInstanceService = deregisteredInstanceService;
     }
 
     @Transactional
@@ -73,7 +81,9 @@ public class InstanceRegistrationService {
                 instance.getHostname(),
                 instance.getProcessId()
         );
+        deregisteredInstanceService.recordDeregistration(instance);
         instanceRepository.delete(instance);
+        fleetStatsService.recordDeregistration();
         return removed;
     }
 

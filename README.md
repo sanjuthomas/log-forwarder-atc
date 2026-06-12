@@ -56,14 +56,17 @@ Open **http://localhost:8090/** in a browser.
 
 The dashboard is a static page served from `src/main/resources/static/index.html` (same pattern as [kafka-web-clients](https://github.com/sanjuthomas/kafka-web-clients)). It loads fleet status from `GET /api/instances` and listens for live updates on `GET /api/instances/events` (Server-Sent Events). Registration and deregistration refresh the table immediately; health, ready, and metrics refresh on the **30 second** poll cycle (or immediately after an agent registers). Use **Refresh now** for a manual update.
 
-**Summary cards** at the top show fleet counts:
+**Summary cards** at the top show fleet counts. Click a card to filter the agent table below:
 
-| Card | Meaning |
-|------|---------|
-| Registered | Total agents in the registry |
-| Reachable | Agents ATC could reach on the last poll |
-| Unreachable | Agents that failed all probes |
-| Unknown | Newly registered agents not polled yet |
+| Card | Meaning | Table view |
+|------|---------|------------|
+| Registered | Total agents in the registry | All registered agents (default) |
+| Reachable | Agents ATC could reach on the last poll | Registered agents with `REACHABLE` status |
+| Unreachable | Agents that failed all probes | Registered agents with `UNREACHABLE` status |
+| Unknown | Newly registered agents not polled yet | Registered agents with `UNKNOWN` status |
+| Deregistered | Total agents deregistered since ATC started (cumulative) | Historical deregistered agents (separate table) |
+
+The active card is highlighted with a blue border. **Deregistered** shows agents removed via `DELETE /api/instances`; the count is cumulative and history is kept even after the live instance and metric snapshots are deleted.
 
 **Agent table** columns:
 
@@ -77,6 +80,8 @@ The dashboard is a static page served from `src/main/resources/static/index.html
 | Port | Agent HTTP port (health, ready, and metrics) |
 | Last poll | Timestamp of the latest metrics snapshot |
 | Registered | Registration time and agent start time |
+
+When **Deregistered** is selected, the table shows: Host, Process ID, Port, Registered, and Deregistered (timestamp).
 
 Status badges use green (up / reachable), red (down / unreachable), and gray (unknown / not polled). If no agents are registered, an empty state explains that agents must call `PUT /api/instances` on startup.
 
@@ -146,7 +151,7 @@ curl -X DELETE http://localhost:8090/api/instances \
   }'
 ```
 
-Returns `204 No Content` on success, `404` if no matching instance exists. A **deregistration** SSE event is broadcast to connected dashboards.
+Returns `204 No Content` on success, `404` if no matching instance exists. ATC records the agent in deregistration history, increments the fleet **Deregistered** counter, and broadcasts a **deregistration** SSE event to connected dashboards.
 
 ### 5. REST API
 
@@ -156,6 +161,8 @@ Returns `204 No Content` on success, `404` if no matching instance exists. A **d
 | DELETE | `/api/instances` | Deregister an agent (`hostname` + `process_id`) |
 | GET | `/api/instances` | All registered agents with latest poll snapshot |
 | GET | `/api/instances/{id}` | Single agent status |
+| GET | `/api/instances/stats` | Fleet counters (`deregistered_total`) |
+| GET | `/api/instances/deregistered` | Deregistered agent history (newest first) |
 | GET | `/api/instances/events` | SSE stream of registration/deregistration events (`fleet-change`) |
 | GET | `/api/instances/{id}/metrics?lookbackMinutes=60` | Time-series snapshots |
 | GET | `/` | Fleet dashboard UI |
@@ -196,6 +203,30 @@ The JSON returned by `GET /api/instances` powers the dashboard. Each entry inclu
     "poll_error": null
   }
 }
+```
+
+**Fleet stats** (`GET /api/instances/stats`):
+
+```json
+{
+  "deregistered_total": 3
+}
+```
+
+**Deregistered history** (`GET /api/instances/deregistered`):
+
+```json
+[
+  {
+    "id": "11111111-2222-3333-4444-555555555555",
+    "instance_id": "5fa00872-bd58-44f2-b3a0-d0653fba5fd8",
+    "hostname": "app-server-01",
+    "process_id": 12345,
+    "port": 8080,
+    "registered_at": "2026-06-11T14:30:05Z",
+    "deregistered_at": "2026-06-11T15:00:00Z"
+  }
+]
 ```
 
 ## Agent contract (expected by ATC)
@@ -273,7 +304,7 @@ mvn clean package
 mvn verify
 ```
 
-Unit and web-layer tests cover registration/deregistration (including SSE broadcast hooks), Prometheus metrics parsing, health/ready `process_id` validation, and bundled dashboard assets.
+Unit and web-layer tests cover registration/deregistration (including SSE broadcast hooks and deregistration history), Prometheus metrics parsing, health/ready `process_id` validation, fleet stats endpoints, and bundled dashboard assets (including clickable summary-card filters).
 
 ## CI
 

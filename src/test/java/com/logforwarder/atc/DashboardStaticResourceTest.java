@@ -24,13 +24,29 @@ class DashboardStaticResourceTest {
         try (InputStream input = getClass().getResourceAsStream("/static/index.html")) {
             assertThat(input).isNotNull();
             String html = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            assertThat(html).contains("/api/instances/events");
+            assertThat(html).contains("summaryDeregistered");
+            assertThat(html).contains("/api/instances/stats");
             assertThat(html).contains("EventSource");
             assertThat(html).contains("renderMetricsPanel");
             assertThat(html).contains("files_watched");
             assertThat(html).contains("lines_published");
             assertThat(html).contains("pipeline_buffer_depth");
             assertThat(html).contains("publish_hibernating");
+        }
+    }
+
+    @Test
+    void dashboardSummaryCardsFilterAgentTable() throws Exception {
+        try (InputStream input = getClass().getResourceAsStream("/static/index.html")) {
+            assertThat(input).isNotNull();
+            String html = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            assertThat(html).contains("summary-card filterable");
+            assertThat(html).contains("data-filter=\"UNREACHABLE\"");
+            assertThat(html).contains("data-filter=\"deregistered\"");
+            assertThat(html).contains("/api/instances/deregistered");
+            assertThat(html).contains("setActiveFilter");
+            assertThat(html).contains("renderDeregisteredTable");
+            assertThat(html).contains("filterInstances");
         }
     }
 }

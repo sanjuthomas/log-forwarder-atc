@@ -30,6 +30,12 @@ class InstanceRegistrationServiceTest {
     @Mock
     private LogForwarderInstanceRepository instanceRepository;
 
+    @Mock
+    private FleetStatsService fleetStatsService;
+
+    @Mock
+    private DeregisteredInstanceService deregisteredInstanceService;
+
     @InjectMocks
     private InstanceRegistrationService registrationService;
 
@@ -71,7 +77,9 @@ class InstanceRegistrationServiceTest {
 
         assertThat(removed.hostname()).isEqualTo("app-server-01");
         assertThat(removed.processId()).isEqualTo(12345);
+        verify(deregisteredInstanceService).recordDeregistration(instance);
         verify(instanceRepository).delete(instance);
+        verify(fleetStatsService).recordDeregistration();
     }
 
     @Test
