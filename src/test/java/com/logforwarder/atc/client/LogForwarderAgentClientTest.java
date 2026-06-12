@@ -63,4 +63,26 @@ class LogForwarderAgentClientTest {
 
         assertNull(error);
     }
+
+    @Test
+    void buildPollErrorIncludesFallbackWhenAllProbesFailWithoutMessages() {
+        String error = LogForwarderAgentClient.buildPollError(
+                LogForwarderAgentClient.ProbeOutcome.failure("Health probe failed"),
+                LogForwarderAgentClient.ProbeOutcome.failure("Ready probe failed"),
+                null
+        );
+
+        assertEquals("Health probe failed; Ready probe failed", error);
+    }
+
+    @Test
+    void buildPollErrorUsesFallbackWhenEveryProbeFailsSilently() {
+        String error = LogForwarderAgentClient.buildPollError(
+                new LogForwarderAgentClient.ProbeOutcome(false, null),
+                new LogForwarderAgentClient.ProbeOutcome(false, null),
+                null
+        );
+
+        assertEquals("All agent probes failed", error);
+    }
 }

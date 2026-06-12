@@ -5,6 +5,7 @@ import com.logforwarder.atc.dto.FleetChangeEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -36,6 +37,29 @@ class FleetEventBroadcasterTest {
 
         assertDoesNotThrow(() -> broadcaster.broadcast(event));
         emitter.complete();
+    }
+
+    @Test
+    void broadcastRemovesEmittersThatFailToSend() throws Exception {
+        FleetEventBroadcaster broadcaster = new FleetEventBroadcaster();
+        SseEmitter failingEmitter = new SseEmitter(0L) {
+            @Override
+            public void send(Object object) throws IOException {
+                throw new IOException("broken stream");
+            }
+        };
+        var emittersField = FleetEventBroadcaster.class.getDeclaredField("emitters");
+        emittersField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var emitters = (java.util.List<SseEmitter>) emittersField.get(broadcaster);
+        emitters.add(failingEmitter);
+
+        assertDoesNotThrow(() -> broadcaster.broadcast(new FleetChangeEvent(
+                FleetChangeType.DEREGISTERED,
+                UUID.randomUUID(),
+                "app-server-01",
+                12345
+        )));
     }
 
     @Test
