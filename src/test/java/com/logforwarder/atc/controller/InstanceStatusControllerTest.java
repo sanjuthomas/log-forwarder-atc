@@ -1,7 +1,10 @@
 package com.logforwarder.atc.controller;
 
+import com.logforwarder.atc.domain.Reachability;
 import com.logforwarder.atc.dto.DeregisteredInstanceSummaryResponse;
 import com.logforwarder.atc.dto.FleetStatsResponse;
+import com.logforwarder.atc.dto.InstanceSummaryResponse;
+import com.logforwarder.atc.dto.MetricsSnapshotResponse;
 import com.logforwarder.atc.service.DeregisteredInstanceService;
 import com.logforwarder.atc.service.FleetEventBroadcaster;
 import com.logforwarder.atc.service.FleetStatsService;
@@ -109,5 +112,76 @@ class InstanceStatusControllerTest {
 
         verify(fleetEventBroadcaster).subscribe();
         emitter.complete();
+    }
+
+    @Test
+    void listInstancesReturnsFleetSummaries() throws Exception {
+        UUID instanceId = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        when(statusService.listInstances()).thenReturn(List.of(
+                new InstanceSummaryResponse(
+                        instanceId,
+                        "app-server-01",
+                        12345,
+                        Instant.parse("2026-06-11T14:30:00Z"),
+                        8080,
+                        Instant.parse("2026-06-11T14:30:05Z"),
+                        Instant.parse("2026-06-11T15:00:00Z"),
+                        Reachability.REACHABLE,
+                        null
+                )
+        ));
+
+        mockMvc.perform(get("/api/instances"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].hostname").value("app-server-01"))
+                .andExpect(jsonPath("$[0].reachability").value("REACHABLE"));
+    }
+
+    @Test
+    void getInstanceReturnsSummary() throws Exception {
+        UUID instanceId = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        when(statusService.getInstance(instanceId)).thenReturn(new InstanceSummaryResponse(
+                instanceId,
+                "app-server-01",
+                12345,
+                Instant.parse("2026-06-11T14:30:00Z"),
+                8080,
+                Instant.parse("2026-06-11T14:30:05Z"),
+                null,
+                Reachability.UNKNOWN,
+                null
+        ));
+
+        mockMvc.perform(get("/api/instances/" + instanceId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.process_id").value(12345))
+                .andExpect(jsonPath("$.port").value(8080));
+    }
+
+    @Test
+    void getMetricsUsesLookbackMinutes() throws Exception {
+        UUID instanceId = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        when(statusService.getRecentMetrics(instanceId, java.time.Duration.ofMinutes(15))).thenReturn(List.of(
+                new MetricsSnapshotResponse(
+                        instanceId,
+                        Instant.parse("2026-06-11T15:00:00Z"),
+                        true,
+                        true,
+                        1L,
+                        2L,
+                        3L,
+                        4L,
+                        0L,
+                        false,
+                        0.5,
+                        1024L,
+                        null
+                )
+        ));
+
+        mockMvc.perform(get("/api/instances/" + instanceId + "/metrics").param("lookbackMinutes", "15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].lines_read").value(3))
+                .andExpect(jsonPath("$[0].lines_replayed").value(4));
     }
 }
