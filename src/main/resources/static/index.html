@@ -754,6 +754,14 @@
         return Number(value).toLocaleString();
     }
 
+    function sumMetrics(...values) {
+        const defined = values.filter(value => value != null);
+        if (defined.length === 0) {
+            return null;
+        }
+        return defined.reduce((total, value) => total + Number(value), 0);
+    }
+
     function formatPercent(value) {
         if (value == null) {
             return '—';
@@ -766,7 +774,7 @@
         if (value == null) {
             return '—';
         }
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
         let amount = Number(value);
         let unitIndex = 0;
         while (amount >= 1024 && unitIndex < units.length - 1) {
@@ -821,8 +829,8 @@
         },
         {
             tile: 'Read',
-            metric: 'log_forwarder_lines_read_total',
-            description: 'Total number of log lines read from watched files.'
+            metric: 'log_forwarder_lines_read_total + log_forwarder_lines_replayed_total',
+            description: 'Total lines ingested from watched files: newly tailed lines plus lines re-read after restart when the on-disk watermark lagged behind published data. See the log-forwarder monitoring reference.'
         },
         {
             tile: 'CPU',
@@ -846,7 +854,7 @@
         }
     ];
 
-    const METRICS_HELP_NOTE = 'Published and Read are direct Prometheus counters from the forwarder agent.';
+    const METRICS_HELP_NOTE = 'Published is a direct Prometheus counter. Read is the sum of log_forwarder_lines_read_total and log_forwarder_lines_replayed_total (total ingested lines). Metric definitions are in the log-forwarder monitoring reference.';
 
     const metricsHelpModal = document.getElementById('metricsHelpModal');
     const metricsHelpList = document.getElementById('metricsHelpList');
@@ -906,7 +914,7 @@
                     </div>
                     <div class="metric-tile">
                         <span class="metric-label">Read</span>
-                        <span class="metric-value">${formatNumber(metrics.lines_read)}</span>
+                        <span class="metric-value">${formatNumber(sumMetrics(metrics.lines_read, metrics.lines_replayed))}</span>
                     </div>
                     <div class="metric-tile">
                         <span class="metric-label">CPU</span>
