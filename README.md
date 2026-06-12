@@ -148,14 +148,16 @@ Re-registration with the same `hostname` + `port` updates `process_id` and `time
 
 ### Deregister an agent
 
-Call on graceful shutdown so ATC stops polling and removes the instance (metric history is deleted via cascade):
+Call on graceful shutdown so ATC stops polling and removes the instance (metric history is deleted via cascade). Lookup uses **`hostname` + `port`** only; `process_id` and `timestamp` are accepted for agent compatibility but ignored.
 
 ```bash
 curl -X DELETE http://localhost:8090/api/instances \
   -H 'Content-Type: application/json' \
   -d '{
     "hostname": "app-server-01",
-    "port": 8080
+    "port": 8080,
+    "process_id": 12345,
+    "timestamp": "2026-06-11T15:00:00.123456789Z"
   }'
 ```
 
@@ -166,7 +168,7 @@ Returns `204 No Content` on success, `404` if no matching instance exists. ATC r
 | Method | Path | Description |
 |--------|------|-------------|
 | PUT | `/api/instances` | Register or update an agent |
-| DELETE | `/api/instances` | Deregister an agent (`hostname` + `port`) |
+| DELETE | `/api/instances` | Deregister an agent (`hostname` + `port`; extra fields ignored) |
 | GET | `/api/instances` | All registered agents with latest poll snapshot |
 | GET | `/api/instances/{id}` | Single agent status |
 | GET | `/api/instances/stats` | Fleet counters (`deregistered_total`) |

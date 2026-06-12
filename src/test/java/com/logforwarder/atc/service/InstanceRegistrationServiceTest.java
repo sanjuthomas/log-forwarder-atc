@@ -72,7 +72,7 @@ class InstanceRegistrationServiceTest {
         when(instanceRepository.findByHostnameAndPort("app-server-01", 8080)).thenReturn(Optional.of(instance));
 
         DeregisteredInstance removed = registrationService.deregister(
-                new DeregistrationRequest("app-server-01", 8080)
+                new DeregistrationRequest("app-server-01", 8080, 12345L, null)
         );
 
         assertThat(removed.hostname()).isEqualTo("app-server-01");
@@ -86,7 +86,7 @@ class InstanceRegistrationServiceTest {
     void deregisterThrowsWhenInstanceMissing() {
         when(instanceRepository.findByHostnameAndPort("missing", 8080)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> registrationService.deregister(new DeregistrationRequest("missing", 8080)))
+        assertThatThrownBy(() -> registrationService.deregister(new DeregistrationRequest("missing", 8080, null, null)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
