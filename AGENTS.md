@@ -6,7 +6,28 @@ Guidance for AI coding agents working in **log-forwarder-atc**.
 
 Spring Boot service that registers **log-forwarder** agents, polls their `/health`, `/ready`, and `/metrics` endpoints, stores fleet state in PostgreSQL/TimescaleDB, and serves a fleet dashboard plus REST/SSE API.
 
-Stack: Java **21**, Maven Wrapper (`./mvnw`), Flyway migrations, JaCoCo (80% line coverage minimum).
+Stack: Java **21**, Maven Wrapper (`./mvnw`), Flyway migrations, JaCoCo (**80% minimum overall coverage**).
+
+---
+
+## Test coverage policy (required)
+
+**Minimum overall coverage: 80%** on the project bundle, enforced by JaCoCo during `./mvnw verify`.
+
+Configured in `pom.xml` as `${jacoco.minimum.coverage}` (currently **0.80**). The build fails if **any** of these bundle ratios drop below 80%:
+
+| Metric | Enforced |
+|--------|----------|
+| Instructions | Yes |
+| Branches | Yes |
+| Lines | Yes |
+
+Agents **must**:
+
+1. Run `./mvnw verify` after code changes — not `./mvnw test` alone (JaCoCo `check` runs in the `verify` phase).
+2. Add or update tests when new behavior would drop coverage below 80%.
+3. Not lower `jacoco.minimum.coverage` or remove JaCoCo limits without explicit maintainer approval.
+4. Report local coverage from `target/site/jacoco/index.html` when debugging gaps.
 
 ---
 
@@ -41,6 +62,7 @@ Agents **must**:
 | `springdoc.version` | 3.0.3 | Must match Boot 4 |
 | `testcontainers.version` | 1.20.4 | Stay on 1.x until a dedicated TC 2 migration |
 | `okhttp.version` | 5.4.0 | Required for `mockwebserver` (not Boot-managed) |
+| `jacoco.minimum.coverage` | 0.80 | Minimum overall bundle coverage (80%) |
 
 ---
 
@@ -50,7 +72,7 @@ Agents **must**:
 - `@WebMvcTest` import: `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest`.
 - Full-stack tests with HTTP client: `@AutoConfigureTestRestTemplate` and `org.springframework.boot.resttestclient.TestRestTemplate`.
 - Integration tests: `@SpringBootTest` + Testcontainers TimescaleDB (`LogForwarderAtcIntegrationTest` pattern).
-- Always run `./mvnw verify` before proposing dependency or test changes.
+- Always run `./mvnw verify` before proposing dependency or test changes; **overall coverage must stay ≥ 80%**.
 
 ---
 

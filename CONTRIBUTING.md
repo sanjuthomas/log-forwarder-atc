@@ -29,7 +29,7 @@ Open http://localhost:8090/ for the fleet dashboard.
 ./mvnw verify
 ```
 
-This runs unit tests, integration tests (Testcontainers + TimescaleDB), and enforces **80%** line coverage via JaCoCo.
+This runs unit tests, integration tests (Testcontainers + TimescaleDB), and enforces **80% minimum overall coverage** (instructions, branches, lines) via JaCoCo.
 
 Run only unit tests:
 
