@@ -5,6 +5,16 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # Spring Boot 4 requires a deliberate migration (mockwebserver versioning, API changes, etc.)
+      - dependency-name: org.springframework.boot:spring-boot-starter-parent
+        update-types: ["version-update:semver-major"]
+      # Testcontainers 2.x changed BOM/module resolution; stay on 1.x until migrated
+      - dependency-name: org.testcontainers:testcontainers-bom
+        update-types: ["version-update:semver-major"]
+      # springdoc 3.x targets Spring Boot 4; use springdoc 2.x on Boot 3
+      - dependency-name: org.springdoc:springdoc-openapi-starter-webmvc-ui
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
