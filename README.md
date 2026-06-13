@@ -1,7 +1,7 @@
 # Log Forwarder ATC
 
 [![Java CI](https://github.com/sanjuthomas/log-forwarder-atc/actions/workflows/maven.yml/badge.svg)](https://github.com/sanjuthomas/log-forwarder-atc/actions/workflows/maven.yml)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Air Traffic Controller for **[log-forwarder](https://github.com/sanjuthomas/log-forwarder)** agents. Agents register on startup; ATC stores registry data in PostgreSQL and polls each agent every **30 seconds** for health, readiness, and metrics. Registration and deregistration are pushed to the fleet dashboard over SSE; health/ready status continues on the scheduled poll. Metric snapshots are stored in a **TimescaleDB** hypertable (PostgreSQL extension) for time-series queries. A built-in **fleet dashboard** at `/` shows registered agents and live status.
 
@@ -360,7 +360,7 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for build inst
 
 ## License
 
-Licensed under the [Apache License 2.0](LICENSE).
+Licensed under the [MIT License](LICENSE).
 
 ## Next steps (out of scope for v0.1)
 

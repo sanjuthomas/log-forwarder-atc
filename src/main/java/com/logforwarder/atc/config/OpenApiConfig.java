@@ -17,7 +17,7 @@ public class OpenApiConfig {
                         .description("Air Traffic Controller for log-forwarder agents")
                         .version("0.1.0")
                         .license(new License()
-                                .name("Apache 2.0")
-                                .url("https://www.apache.org/licenses/LICENSE-2.0")));
+                                .name("MIT")
+                                .url("https://opensource.org/licenses/MIT")));
     }
 }

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Apache 2.0 license and open-source project metadata
+- MIT license and open-source project metadata
 - Maven Wrapper, Dockerfile, and full-stack `docker compose` setup
 - OpenAPI documentation (Swagger UI)
 - Testcontainers integration test against TimescaleDB
