@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -33,16 +33,16 @@ class InstanceStatusControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private InstanceStatusService statusService;
 
-    @MockBean
+    @MockitoBean
     private FleetEventBroadcaster fleetEventBroadcaster;
 
-    @MockBean
+    @MockitoBean
     private FleetStatsService fleetStatsService;
 
-    @MockBean
+    @MockitoBean
     private DeregisteredInstanceService deregisteredInstanceService;
 
     @Test

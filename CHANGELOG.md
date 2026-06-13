@@ -7,15 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- MIT license and open-source project metadata
-- Maven Wrapper, Dockerfile, and full-stack `docker compose` setup
-- OpenAPI documentation (Swagger UI)
-- Testcontainers integration test against TimescaleDB
-- Dependabot, release workflow, and JaCoCo coverage reporting in CI
-- Consistent JSON error responses via global exception handler
-- Contributing, security, and code of conduct documentation
+- Upgrade to Spring Boot 4.1, springdoc OpenAPI 3, and modular Boot 4 starters (webmvc, webclient, flyway)
 
 ## [0.1.0] - 2026-06-13
 

@@ -345,7 +345,7 @@ Integration tests use **Testcontainers** with TimescaleDB to verify Flyway migra
 
 ## CI
 
-GitHub Actions runs `./mvnw verify` on push, pull requests, and version tags (JDK 21). JaCoCo coverage reports are uploaded as workflow artifacts. See `.github/workflows/maven.yml`.
+GitHub Actions runs `./mvnw verify` on push, pull requests, and version tags (**JDK 21**, **Spring Boot 4**). JaCoCo coverage reports are uploaded as workflow artifacts. See `.github/workflows/maven.yml`.
 
 Tagged releases (`v*`) build a JAR and attach it to a GitHub Release. See `.github/workflows/release.yml`.
 
