@@ -353,6 +353,8 @@ Tagged releases (`v*`) build a JAR and attach it to a GitHub Release. See `.gith
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions and PR guidelines.
 
+AI coding agents should follow [AGENTS.md](AGENTS.md) for Spring Boot version policy and project conventions.
+
 ## Related projects
 
 - [log-forwarder](https://github.com/sanjuthomas/log-forwarder) — the log tailing agent monitored by ATC

@@ -10,6 +10,8 @@ Thank you for your interest in contributing. This document covers how to build, 
 
 Maven is optional; the repo includes a Maven Wrapper (`./mvnw`).
 
+If you use an AI coding agent (Cursor, Copilot, etc.), read [AGENTS.md](AGENTS.md) first — it defines required Spring Boot 4.x versions and starter conventions.
+
 ## Getting started
 
 ```bash
@@ -27,7 +29,7 @@ Open http://localhost:8090/ for the fleet dashboard.
 ./mvnw verify
 ```
 
-This runs unit tests, integration tests (Testcontainers + TimescaleDB), and enforces **80%** line coverage via JaCoCo.
+This runs unit tests, integration tests (Testcontainers + TimescaleDB), and enforces **80% minimum overall coverage** (instructions, branches, lines) via JaCoCo.
 
 Run only unit tests:
 
