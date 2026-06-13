@@ -1,6 +1,9 @@
 # Log Forwarder ATC
 
-Air Traffic Controller for **log-forwarder** agents. Agents register on startup; ATC stores registry data in PostgreSQL and polls each agent every **30 seconds** for health, readiness, and metrics. Registration and deregistration are pushed to the fleet dashboard over SSE; health/ready status continues on the scheduled poll. Metric snapshots are stored in a **TimescaleDB** hypertable (PostgreSQL extension) for time-series queries. A built-in **fleet dashboard** at `/` shows registered agents and live status.
+[![Java CI](https://github.com/sanjuthomas/log-forwarder-atc/actions/workflows/maven.yml/badge.svg)](https://github.com/sanjuthomas/log-forwarder-atc/actions/workflows/maven.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+Air Traffic Controller for **[log-forwarder](https://github.com/sanjuthomas/log-forwarder)** agents. Agents register on startup; ATC stores registry data in PostgreSQL and polls each agent every **30 seconds** for health, readiness, and metrics. Registration and deregistration are pushed to the fleet dashboard over SSE; health/ready status continues on the scheduled poll. Metric snapshots are stored in a **TimescaleDB** hypertable (PostgreSQL extension) for time-series queries. A built-in **fleet dashboard** at `/` shows registered agents and live status.
 
 ## Architecture
 
@@ -42,23 +45,35 @@ Each live agent is uniquely identified by **`hostname` + `port`**, so multiple f
 
 Alternatives for later: InfluxDB, VictoriaMetrics, or Prometheus remote write.
 
+Metric retention is not enforced by ATC today; configure [TimescaleDB retention policies](https://docs.timescale.com/use-timescale/latest/data-retention/create-a-retention-policy/) at the database level when you need automatic pruning.
+
 ## Quick start
 
-### 1. Start the database
+### Option A: Docker Compose (database + app)
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-### 2. Run ATC
+Open **http://localhost:8090/** for the fleet dashboard.
+
+### Option B: Local development
+
+#### 1. Start the database
 
 ```bash
-mvn spring-boot:run
+docker compose up -d timescaledb
+```
+
+#### 2. Run ATC
+
+```bash
+./mvnw spring-boot:run
 ```
 
 ATC listens on **8090** by default.
 
-### 3. Open the fleet dashboard
+#### 3. Open the fleet dashboard
 
 Open **http://localhost:8090/** in a browser.
 
@@ -176,6 +191,8 @@ Returns `204 No Content` on success, `404` if no matching instance exists. ATC r
 | GET | `/api/instances/events` | SSE stream of registration/deregistration events (`fleet-change`) |
 | GET | `/api/instances/{id}/metrics?lookbackMinutes=60` | Time-series snapshots |
 | GET | `/` | Fleet dashboard UI |
+
+Interactive API docs (OpenAPI) are available at **http://localhost:8090/swagger-ui.html** when ATC is running.
 
 **SSE event** (`event: fleet-change`):
 
@@ -313,20 +330,37 @@ Paths are configurable via `atc.agent.*` in `application.yml`.
 ## Build
 
 ```bash
-mvn clean package
+./mvnw clean package
 ```
 
 ## Tests
 
 ```bash
-mvn verify
+./mvnw verify
 ```
 
 Unit and web-layer tests cover registration/deregistration (including SSE broadcast hooks and deregistration history), Prometheus metrics parsing, health/ready `process_id` validation, fleet stats endpoints, and bundled dashboard assets (including clickable summary-card filters).
 
+Integration tests use **Testcontainers** with TimescaleDB to verify Flyway migrations and end-to-end registration against a real database (requires Docker).
+
 ## CI
 
-GitHub Actions runs `mvn verify` on push, pull requests, and version tags (JDK 21). See `.github/workflows/maven.yml`.
+GitHub Actions runs `./mvnw verify` on push, pull requests, and version tags (JDK 21). JaCoCo coverage reports are uploaded as workflow artifacts. See `.github/workflows/maven.yml`.
+
+Tagged releases (`v*`) build a JAR and attach it to a GitHub Release. See `.github/workflows/release.yml`.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions and PR guidelines.
+
+## Related projects
+
+- [log-forwarder](https://github.com/sanjuthomas/log-forwarder) — the log tailing agent monitored by ATC
+- [kafka-web-clients](https://github.com/sanjuthomas/kafka-web-clients) — similar static-dashboard pattern used for the fleet UI
+
+## License
+
+Licensed under the [MIT License](LICENSE).
 
 ## Next steps (out of scope for v0.1)
 

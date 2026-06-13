@@ -16,10 +16,46 @@
     <version>0.1.0-SNAPSHOT</version>
     <name>log-forwarder-atc</name>
     <description>Air Traffic Controller for log-forwarder agents</description>
+    <url>https://github.com/sanjuthomas/log-forwarder-atc</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>sanjuthomas</id>
+            <name>Sanju Thomas</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/sanjuthomas/log-forwarder-atc.git</connection>
+        <developerConnection>scm:git:ssh://github.com/sanjuthomas/log-forwarder-atc.git</developerConnection>
+        <url>https://github.com/sanjuthomas/log-forwarder-atc</url>
+    </scm>
 
     <properties>
         <java.version>21</java.version>
+        <springdoc.version>2.6.0</springdoc.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -37,6 +73,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -63,6 +104,16 @@
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>mockwebserver</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

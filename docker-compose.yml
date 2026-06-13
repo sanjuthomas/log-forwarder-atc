@@ -1,6 +1,6 @@
 services:
   timescaledb:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:2.17.2-pg16
     container_name: log-forwarder-atc-db
     environment:
       POSTGRES_DB: log_forwarder_atc
@@ -15,6 +15,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  atc:
+    build: .
+    container_name: log-forwarder-atc
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: log_forwarder_atc
+      DB_USER: atc
+      DB_PASSWORD: atc
+      SERVER_PORT: 8090
+    ports:
+      - "8090:8090"
 
 volumes:
   atc-db-data:
