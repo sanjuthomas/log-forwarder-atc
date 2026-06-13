@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # Testcontainers 2.x changed BOM/module resolution; stay on 1.x until migrated
+      - dependency-name: org.testcontainers:testcontainers-bom
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
